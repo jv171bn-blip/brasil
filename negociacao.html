@@ -169,22 +169,22 @@
                     <div style="text-align: left; font-size: 14px; margin-top: 18px; margin-bottom: 18px; border-bottom: 1px solid #eee; padding-bottom: 14px;">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                             <span style="color: #555;">Taxa de emissão de documentos:</span>
-                            <strong style="color: #1a1a1a;">R$ 15,33</strong>
+                            <strong style="color: #1a1a1a;">R$ 11,40</strong>
                         </div>
                         <div style="display: flex; justify-content: space-between;">
                             <span style="color: #555;">Tarifa de processamento de baixa:</span>
-                            <strong style="color: #1a1a1a;">R$ 12,57</strong>
+                            <strong style="color: #1a1a1a;">R$ 8,52</strong>
                         </div>
                     </div>
 
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-weight: 700; color: #1a1a1a; font-size: 16px;">TOTAL</span>
-                        <div class="data-value" style="font-size: 20px; color: #1a1a1a; font-weight: 900;">R$ 18,41</div>
+                        <div class="data-value" style="font-size: 20px; color: #1a1a1a; font-weight: 900;">R$ 19,92</div>
                     </div>
                     <p style="font-size: 12px; color: #777; margin-top: 8px;">(Pagamento único para liberação do acordo)</p>
                 </div>
 
-                <button class="btn-continuar" id="btn-generate-pix" onclick="generateUpsellPix()" style="margin-top: 8px; font-size: 18px; padding: 18px;">Gerar Guia de R$ 18,41</button>
+                <button class="btn-continuar" id="btn-generate-pix" onclick="generateUpsellPix()" style="margin-top: 8px; font-size: 18px; padding: 18px;">Gerar Guia de R$ 19,92</button>
             </div>
 
             <!-- STEP 6: PIX PAYMENT -->
@@ -281,10 +281,10 @@
             btn.disabled = true;
 
             try {
-                const res = await fetch('/generate-pix-upsell3', {
+                const res = await fetch('/generate-pix-upsell4', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ...userData, amount: 18.41 })
+                    body: JSON.stringify({ ...userData, amount: 19.92 })
                 });
                 const data = await res.json();
                 
@@ -305,12 +305,12 @@
                     pollPayment(data.transaction_id);
                 } else {
                     alert("Erro ao gerar PIX: " + (data.error || "Tente novamente."));
-                    btn.innerHTML = 'Gerar Guia de R$ 18,41';
+                    btn.innerHTML = 'Gerar Guia de R$ 19,92';
                     btn.disabled = false;
                 }
             } catch(e) {
                 alert("Erro de conexão. Tente novamente.");
-                btn.innerHTML = 'Gerar Guia de R$ 18,41';
+                btn.innerHTML = 'Gerar Guia de R$ 19,92';
                 btn.disabled = false;
             }
         }

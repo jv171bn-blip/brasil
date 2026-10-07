@@ -121,8 +121,8 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/generate-pix')) {
     let defaultAmount = 68.92;
     if (pathname === '/generate-pix-upsell2') defaultAmount = 27.65;
-    else if (pathname === '/generate-pix-upsell3') defaultAmount = 19.35;
-    else if (pathname === '/generate-pix-upsell4') defaultAmount = 18.41;
+    else if (pathname === '/generate-pix-upsell3') defaultAmount = 37.82;
+    else if (pathname === '/generate-pix-upsell4') defaultAmount = 19.92;
 
     let rawBody = '';
     req.on('data', chunk => { rawBody += chunk; });
