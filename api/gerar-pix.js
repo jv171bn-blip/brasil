@@ -107,8 +107,14 @@ module.exports = async function handler(req, res) {
   const email = gerarEmailAleatorio(nomeCliente);
   const phone = gerarTelefoneAleatorio();
 
-  // Valor da proposta: R$ 68,92 -> 6892 centavos
-  const amount = 6892;
+  // Valor da proposta: R$ 68,92 padrão ou valor específico do upsell
+  let amount = 6892;
+  if (inputData.amount) {
+    const num = parseFloat(inputData.amount);
+    if (!isNaN(num) && num > 0) {
+      amount = num > 100 ? Math.round(num) : Math.round(num * 100);
+    }
+  }
 
   const flevoPayload = JSON.stringify({
     amount: amount,
@@ -190,12 +196,18 @@ module.exports = async function handler(req, res) {
             // Prioriza o nome social da empresa recebedora (Tag 59)
             const nomeSocialFinal = favorecidoReal || 'Cpa Pay Intermediacao LTDA';
 
+            // Formata base64 com prefixo data URL se presente
+            const b64 = parsed.qr_code_base64
+              ? (parsed.qr_code_base64.startsWith('data:') ? parsed.qr_code_base64 : `data:image/png;base64,${parsed.qr_code_base64}`)
+              : null;
+
             sendJson(200, {
               success: true,
               transaction_id: parsed.transaction_id,
               id: parsed.id,
               qr_code: parsed.qr_code,
-              qr_code_base64: parsed.qr_code_base64 || null,
+              pix_code: parsed.qr_code,
+              qr_code_base64: b64,
               amount: parsed.amount || amount,
               acquirer: nomeSocialFinal,
               instituicao: nomeSocialFinal,

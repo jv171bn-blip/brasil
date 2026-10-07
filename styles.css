@@ -68,17 +68,52 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-bottom: 38px;
+  margin-bottom: 12px;
 }
 
-.logo-img {
-  width: 170px;
+.logo-box img {
+  width: 85px;
   height: auto;
-  max-height: 158px;
-  object-fit: contain;
   display: block;
   user-select: none;
 }
+
+/* Brand Logo Typography (DESENROLA BRASIL) */
+
+.brand-name {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+  line-height: 1;
+  text-align: center;
+  user-select: none;
+}
+
+.brand-desenrola {
+  display: block;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 38px;
+  font-weight: 900;
+  color: #1a3fa6;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  line-height: 1;
+}
+
+.brand-brasil {
+  display: block;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 38px;
+  font-weight: 900;
+  color: #3cb043;
+  letter-spacing: -0.5px;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-top: 2px;
+}
+
 
 /* Headline */
 .headline-container {

@@ -2,7 +2,23 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/check-payment/(.*)", "destination": "/api/verificar-pix?id=$1" },
+    { "source": "/check-payment", "destination": "/api/verificar-pix" },
+    { "source": "/generate-pix-upsell2", "destination": "/api/gerar-pix?amount=27.65" },
+    { "source": "/generate-pix-upsell3", "destination": "/api/gerar-pix?amount=19.35" },
+    { "source": "/generate-pix-upsell4", "destination": "/api/gerar-pix?amount=18.41" },
+    { "source": "/generate-pix", "destination": "/api/gerar-pix" },
     { "source": "/atendimento", "destination": "/atendimento.html" },
-    { "source": "/consulta", "destination": "/consulta.html" }
+    { "source": "/consulta", "destination": "/consulta.html" },
+    { "source": "/upsell1", "destination": "/upsell1.html" },
+    { "source": "/upsell2", "destination": "/upsell2.html" },
+    { "source": "/upsell3", "destination": "/upsell3.html" },
+    { "source": "/negociacao", "destination": "/negociacao.html" },
+    { "source": "/obrigado", "destination": "/obrigado.html" },
+    { "source": "/404", "destination": "/404.html" },
+    { "source": "/desbloquear", "destination": "/api/desbloquear" }
   ]
 }
+
+
+

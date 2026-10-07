@@ -1,6 +1,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { getClientIp } = require('./api/lib/ip.js');
+const { verificarSessaoFinalizada } = require('./api/lib/db.js');
 
 const PORT = 3000;
 const MIME_TYPES = {
@@ -32,9 +34,108 @@ try {
   }
 } catch (e) {}
 
-const server = http.createServer((req, res) => {
+const server = http.createServer(async (req, res) => {
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = decodeURIComponent(urlObj.pathname);
+
+  // Trava de Segurança e Prevenção de Fraudes: Filtro de Entrada
+  const rotasFunilProtegidas = [
+    '/',
+    '/index.html',
+    '/atendimento',
+    '/atendimento.html',
+    '/consulta',
+    '/consulta.html',
+    '/negociacao',
+    '/negociacao.html',
+    '/upsell1',
+    '/upsell1.html',
+    '/upsell2',
+    '/upsell2.html',
+    '/upsell3',
+    '/upsell3.html'
+  ];
+
+  // Rota de Desbloqueio e Modo Desenvolvedor
+  if (pathname === '/desbloquear' || pathname.startsWith('/desbloquear')) {
+    delete require.cache[require.resolve('./api/desbloquear.js')];
+    const handler = require('./api/desbloquear.js');
+    req.query = Object.fromEntries(urlObj.searchParams);
+    req.body = {};
+    return handler(req, res);
+  }
+
+  // Verificação de Modo Administrador / Bypass (?admin=1 ou cookie __admin_bypass)
+  const cookieHeader = req.headers['cookie'] || '';
+  const isAdminBypass = cookieHeader.includes('__admin_bypass=1') || 
+                        urlObj.searchParams.has('admin') || 
+                        urlObj.searchParams.has('bypass');
+
+  if (isAdminBypass) {
+    if (urlObj.searchParams.has('admin') || urlObj.searchParams.has('bypass')) {
+      res.setHeader('Set-Cookie', '__admin_bypass=1; Path=/; Max-Age=31536000; SameSite=Lax');
+    }
+    // Desenvolvedor liberado sem restrições
+  } else if (rotasFunilProtegidas.includes(pathname)) {
+    const clientIp = getClientIp(req);
+    const hasCompletedCookie = cookieHeader.includes('__funnel_completed=1');
+
+    const responder404 = () => {
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      const p404 = path.join(__dirname, '404.html');
+      if (fs.existsSync(p404)) {
+        return fs.createReadStream(p404).pipe(res);
+      }
+      return res.end('<!DOCTYPE html><html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1></body></html>');
+    };
+
+    if (hasCompletedCookie) {
+      return responder404();
+    }
+
+    try {
+      const statusBloqueio = await verificarSessaoFinalizada({ ip: clientIp });
+      if (statusBloqueio && statusBloqueio.bloqueado) {
+        return responder404();
+      }
+    } catch (err) {
+      console.error('[Middleware] Erro na validação de sessão finalizada:', err);
+    }
+  }
+
+
+
+  // Rotas compatíveis com polling de pagamento dos upsells
+  if (pathname.startsWith('/check-payment')) {
+    const parts = pathname.replace('/check-payment', '').split('/').filter(Boolean);
+    const idFromPath = parts[0] || '';
+    req.query = Object.fromEntries(urlObj.searchParams);
+    if (idFromPath) req.query.id = idFromPath;
+    req.body = {};
+    delete require.cache[require.resolve('./api/verificar-pix.js')];
+    const handler = require('./api/verificar-pix.js');
+    return handler(req, res);
+  }
+
+  // Rotas compatíveis com geração de PIX dos upsells
+  if (pathname.startsWith('/generate-pix')) {
+    let defaultAmount = 68.92;
+    if (pathname === '/generate-pix-upsell2') defaultAmount = 27.65;
+    else if (pathname === '/generate-pix-upsell3') defaultAmount = 19.35;
+    else if (pathname === '/generate-pix-upsell4') defaultAmount = 18.41;
+
+    let rawBody = '';
+    req.on('data', chunk => { rawBody += chunk; });
+    req.on('end', () => {
+      try { req.body = rawBody ? JSON.parse(rawBody) : {}; } catch(e) { req.body = {}; }
+      req.query = Object.fromEntries(urlObj.searchParams);
+      if (!req.body.amount) req.body.amount = defaultAmount;
+      delete require.cache[require.resolve('./api/gerar-pix.js')];
+      const handler = require('./api/gerar-pix.js');
+      return handler(req, res);
+    });
+    return;
+  }
 
   // Rotas automáticas para funções serverless em /api/
   if (pathname.startsWith('/api/')) {
@@ -80,11 +181,22 @@ const server = http.createServer((req, res) => {
     return res.end();
   }
   if (decodedUrl === '/atendimento') decodedUrl = '/atendimento.html';
+  if (decodedUrl === '/consulta') decodedUrl = '/consulta.html';
+  if (decodedUrl === '/upsell1') decodedUrl = '/upsell1.html';
+  if (decodedUrl === '/upsell2') decodedUrl = '/upsell2.html';
+  if (decodedUrl === '/upsell3') decodedUrl = '/upsell3.html';
+  if (decodedUrl === '/negociacao') decodedUrl = '/negociacao.html';
+  if (decodedUrl === '/obrigado') decodedUrl = '/obrigado.html';
+  if (decodedUrl === '/404') decodedUrl = '/404.html';
   let filePath = path.join(__dirname, decodedUrl === '/' ? 'index.html' : decodedUrl);
 
   fs.stat(filePath, (err, stats) => {
     if (err || !stats.isFile()) {
-      res.writeHead(404, { 'Content-Type': 'text/plain' });
+      const p404 = path.join(__dirname, '404.html');
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' });
+      if (fs.existsSync(p404)) {
+        return fs.createReadStream(p404).pipe(res);
+      }
       res.end('Not Found');
       return;
     }

