@@ -1,0 +1,202 @@
+/* Reset & Base Styles */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #333333;
+}
+
+/* Page Outer Container */
+.page-container {
+  width: 100%;
+  max-width: 416px;
+  margin: 0 auto;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #f0f2f5;
+  box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
+}
+
+/* Top Hero Card */
+.card-hero {
+  width: 100%;
+  background-color: #ffffff;
+  border-bottom-left-radius: 20px;
+  border-bottom-right-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.04);
+}
+
+/* Banner */
+.banner-container {
+  width: 100%;
+  height: 180px;
+  overflow: hidden;
+  position: relative;
+  background-color: #0b224e;
+}
+
+.banner-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* Card Body Content */
+.card-body {
+  padding: 44px 22px 34px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Logo Box */
+.logo-box {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 38px;
+}
+
+.logo-img {
+  width: 170px;
+  height: auto;
+  max-height: 158px;
+  object-fit: contain;
+  display: block;
+  user-select: none;
+}
+
+/* Headline */
+.headline-container {
+  margin-bottom: 26px;
+  max-width: 350px;
+}
+
+.headline-title {
+  font-size: 16.5px;
+  font-weight: 700;
+  line-height: 1.44;
+  color: #1a3fa6;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+/* Subheadline */
+.subheadline-container {
+  margin-bottom: 32px;
+  max-width: 320px;
+}
+
+.subheadline-text {
+  font-size: 15.5px;
+  font-weight: 400;
+  line-height: 1.48;
+  color: #333333;
+  margin: 0;
+}
+
+/* Action CTA */
+.action-container {
+  width: 100%;
+}
+
+.btn-primary {
+  width: 100%;
+  height: 60px;
+  background-color: #1a3fa6;
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
+  user-select: none;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background-color: #143285;
+  box-shadow: 0 4px 16px rgba(26, 63, 166, 0.25);
+}
+
+.btn-primary:active {
+  transform: scale(0.985);
+  background-color: #10296e;
+}
+
+/* Gap between card and footer */
+.section-gap {
+  height: 10px;
+  width: 100%;
+  background-color: #f0f2f5;
+}
+
+/* Footer Section */
+.footer-section {
+  width: 100%;
+  background-color: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  padding: 24px 20px 32px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.footer-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 22px;
+}
+
+.footer-link {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1a3fa6;
+  text-decoration: none;
+  transition: opacity 0.15s ease;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+  opacity: 0.85;
+}
+
+.footer-details {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 320px;
+}
+
+.footer-details p {
+  font-size: 10px;
+  font-weight: 400;
+  color: #888888;
+  line-height: 1.6;
+  letter-spacing: 0.2px;
+  text-transform: uppercase;
+}

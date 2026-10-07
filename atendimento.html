@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Desenrola Brasil - Atendimento</title>
+  <meta name="description" content="Canal oficial de atendimento do Programa Desenrola Brasil.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="atendimento.css">
+</head>
+<body>
+
+  <!-- Top bar gov.br -->
+  <header class="govbr-header">
+    <div class="header-inner">
+      <img src="logo-portal.webp" alt="gov.br" class="govbr-logo-img">
+      <div class="user-chip" id="userChip">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:2px; vertical-align:text-bottom;">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        <span id="userChipName"></span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Agent Bar -->
+  <section class="agent-bar">
+    <div class="agent-inner">
+      <img class="agent-avatar" src="atendente-avatar.webp" alt="Letícia M.">
+      <div class="agent-info">
+        <div class="agent-name">Letícia M.</div>
+        <div class="agent-role">Atendente do Programa Desenrola Brasil</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat Area -->
+  <main class="chat-area" id="chatArea">
+    <!-- 1. Welcome Card -->
+    <div class="welcome-card" id="welcomeCard">
+      <img src="welcome-header.webp" alt="Uma nova chance para perdoar suas dívidas">
+    </div>
+
+    <!-- 2. Typing 1 -->
+    <div class="bubble-row typing-row" id="typing1">
+      <img class="bubble-avatar" src="atendente-avatar.webp" alt="Letícia">
+      <div class="typing-bubble">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- 3. Bubble 1 -->
+    <div class="bubble-row" id="bubble1">
+      <img class="bubble-avatar" src="atendente-avatar.webp" alt="Letícia">
+      <div class="bubble">
+        Olá <strong id="bubbleUserName"></strong>, esse é um canal oficial de atendimento do <strong>Desenrola Brasil</strong> e os seus dados estão seguros conosco. 🔒
+      </div>
+    </div>
+
+    <!-- 4. Typing 2 -->
+    <div class="bubble-row typing-row" id="typing2">
+      <img class="bubble-avatar" src="atendente-avatar.webp" alt="Letícia">
+      <div class="typing-bubble">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- 5. Bubble 2 -->
+    <div class="bubble-row" id="bubble2">
+      <img class="bubble-avatar" src="atendente-avatar.webp" alt="Letícia">
+      <div class="bubble">
+        Aguarde em alguns instantes, um de nossos atendentes entrará na conversa..
+      </div>
+    </div>
+
+    <!-- 6. Video Card -->
+    <div class="video-card" id="videoCard">
+      <video id="leticiaVideo" playsinline webkit-playsinline muted preload="auto">
+        <source src="leticia.mp4" type="video/mp4">
+      </video>
+      <button type="button" class="video-sound-badge" id="videoSoundBadge" onclick="ativarSomEContinuar(event)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+          <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+        </svg>
+        Ativar Som
+      </button>
+    </div>
+
+    <!-- Typing while video plays -->
+    <div class="bubble-row typing-row" id="videoTyping">
+      <img class="bubble-avatar" src="atendente-avatar.webp" alt="Letícia">
+      <div class="typing-bubble">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- 7. System Note -->
+    <div class="system-note" id="systemNote">
+      (Atendente Letícia entrou na conversa..) 
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left:2px; vertical-align:text-bottom;">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+    </div>
+
+    <!-- 8. Confirmation Card (Informações em branco para preenchimento via API) -->
+    <div class="confirm-card" id="confirmCard">
+      <div class="confirm-title">Para continuar, confirme seus dados:</div>
+      
+      <div class="confirm-field">
+        <div class="label">Nome:</div>
+        <div class="value" id="confirmNome"></div>
+      </div>
+
+      <div class="confirm-field">
+        <div class="label">CPF:</div>
+        <div class="value" id="confirmCpf"></div>
+      </div>
+
+      <div class="confirm-field">
+        <div class="label">Data de Nascimento:</div>
+        <div class="value" id="confirmNasc"></div>
+      </div>
+
+      <div class="confirm-btns">
+        <button type="button" class="btn-sim" id="btnSim" onclick="confirmar()">Sim, está correto.</button>
+        <button type="button" class="btn-nao" id="btnNao" onclick="naoSouEu()">Não sou eu</button>
+      </div>
+    </div>
+
+    <!-- 9. Post-confirmation / Dynamic section -->
+    <div class="flow-section" id="flowSection"></div>
+  </main>
+
+  <!-- Sticky footer gov.br -->
+  <footer class="govbr-footer">
+    <div class="footer-inner">
+      <div class="footer-logo">gov<span>.</span>br</div>
+      <p class="footer-license">Todo o conteúdo deste site está publicado sob a licença</p>
+      <p class="footer-rights">Sistema de Renegociação — Todos os direitos reservados</p>
+    </div>
+  </footer>
+
+  <script src="qrcode.min.js"></script>
+  <script src="atendimento.js"></script>
+</body>
+</html>

