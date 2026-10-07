@@ -143,6 +143,53 @@ module.exports = async function handler(req, res) {
           const parsed = JSON.parse(responseBody);
 
           if (parsed && (parsed.status === 'success' || parsed.qr_code)) {
+            // Extrai a Instituição Bancária e a Razão Social/Favorecido reais do payload PIX
+            let pos = 0;
+            let favorecidoReal = '';
+            let instituicaoReal = '';
+            const qrStr = parsed.qr_code || '';
+
+            try {
+              while (pos < qrStr.length - 4) {
+                const tag = qrStr.slice(pos, pos + 2);
+                const len = parseInt(qrStr.slice(pos + 2, pos + 4), 10);
+                if (isNaN(len)) break;
+                const val = qrStr.slice(pos + 4, pos + 4 + len);
+
+                if (tag === '26') {
+                  const domainMatch = val.match(/(?:qrcode\.|pix\.|api\.)?([a-zA-Z0-9-]+)\.(?:com\.br|com|net|io|br)/i);
+                  if (domainMatch && domainMatch[1]) {
+                    const raw = domainMatch[1].toLowerCase();
+                    if (raw.includes('santsbank') || raw.includes('sants')) instituicaoReal = 'SantsBank';
+                    else if (raw.includes('fyhub')) instituicaoReal = 'FyHub';
+                    else if (raw.includes('celcoin')) instituicaoReal = 'Celcoin';
+                    else if (raw.includes('fitbank')) instituicaoReal = 'FitBank';
+                    else if (raw.includes('iugu')) instituicaoReal = 'Iugu';
+                    else if (raw.includes('asaas')) instituicaoReal = 'Asaas';
+                    else if (raw.includes('woovi')) instituicaoReal = 'Woovi';
+                    else if (raw.includes('starkbank')) instituicaoReal = 'Stark Bank';
+                    else instituicaoReal = domainMatch[1].charAt(0).toUpperCase() + domainMatch[1].slice(1);
+                  }
+                }
+
+                if (tag === '59') {
+                  let clean = val.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+                  if (clean.toUpperCase().endsWith(' LTD')) clean = clean + 'A';
+                  favorecidoReal = clean.split(' ').map(w => {
+                    const upper = w.toUpperCase();
+                    if (upper === 'LTDA' || upper === 'SA' || upper === 'S.A.' || upper === 'ME' || upper === 'EPP') return upper;
+                    if (w.length <= 3 && !/[aeiou]/i.test(w)) return upper;
+                    return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+                  }).join(' ');
+                }
+
+                pos = pos + 4 + len;
+              }
+            } catch (e) {}
+
+            // Prioriza o nome social da empresa recebedora (Tag 59)
+            const nomeSocialFinal = favorecidoReal || 'Cpa Pay Intermediacao LTDA';
+
             sendJson(200, {
               success: true,
               transaction_id: parsed.transaction_id,
@@ -150,7 +197,9 @@ module.exports = async function handler(req, res) {
               qr_code: parsed.qr_code,
               qr_code_base64: parsed.qr_code_base64 || null,
               amount: parsed.amount || amount,
-              acquirer: parsed.acquirer || 'Instituição Autorizada Banco Central',
+              acquirer: nomeSocialFinal,
+              instituicao: nomeSocialFinal,
+              favorecido: nomeSocialFinal,
               expires_at: parsed.expires_at || null
             });
           } else {

