@@ -118,24 +118,32 @@ async function submitCPF() {
       localStorage.setItem('desenrola_user', JSON.stringify(data));
     } catch (e) {}
 
-    // Preserva eventuais UTMs de tráfego e mantém apenas o CPF na URL
-    const params = new URLSearchParams(window.location.search);
-    params.delete('nome');
-    params.delete('nasc');
-    params.set('cpf', raw);
-
-    // Redireciona para o atendimento com apenas o CPF na URL
-    window.location.href = 'atendimento.html?' + params.toString();
+    // Preserva integralmente parâmetros de URL (UTMs, tracking) e mantém o CPF da consulta na URL
+    if (typeof redirectPreservingParams === 'function') {
+      redirectPreservingParams('atendimento.html', { cpf: raw });
+    } else {
+      const dest = new URL('atendimento.html', window.location.href);
+      dest.searchParams.set('cpf', raw);
+      new URLSearchParams(window.location.search).forEach((v, k) => {
+        if (!dest.searchParams.has(k)) dest.searchParams.append(k, v);
+      });
+      window.location.href = dest.toString();
+    }
 
   } catch (err) {
     console.error('Erro na requisição /api/consultar-cpf:', err);
     try {
       localStorage.setItem('desenrola_cpf', raw);
     } catch (e) {}
-    const params = new URLSearchParams(window.location.search);
-    params.delete('nome');
-    params.delete('nasc');
-    params.set('cpf', raw);
-    window.location.href = 'atendimento.html?' + params.toString();
+    if (typeof redirectPreservingParams === 'function') {
+      redirectPreservingParams('atendimento.html', { cpf: raw });
+    } else {
+      const dest = new URL('atendimento.html', window.location.href);
+      dest.searchParams.set('cpf', raw);
+      new URLSearchParams(window.location.search).forEach((v, k) => {
+        if (!dest.searchParams.has(k)) dest.searchParams.append(k, v);
+      });
+      window.location.href = dest.toString();
+    }
   }
 }

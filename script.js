@@ -4,9 +4,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (btnAcessar) {
     btnAcessar.addEventListener('click', () => {
-      // Redireciona para a tela de consulta de CPF preservando parâmetros de URL (UTMs)
-      const currentQuery = window.location.search;
-      window.location.href = 'consulta.html' + currentQuery;
+      // Redireciona para a tela de consulta de CPF preservando integralmente parâmetros de URL (UTMs, tracking)
+      if (typeof redirectPreservingParams === 'function') {
+        redirectPreservingParams('consulta.html');
+      } else {
+        const dest = new URL('consulta.html', window.location.href);
+        new URLSearchParams(window.location.search).forEach((v, k) => {
+          if (!dest.searchParams.has(k)) dest.searchParams.append(k, v);
+        });
+        window.location.href = dest.toString();
+      }
     });
   }
 });

