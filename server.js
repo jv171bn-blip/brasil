@@ -42,6 +42,8 @@ const server = http.createServer(async (req, res) => {
   const rotasFunilProtegidas = [
     '/',
     '/index.html',
+    '/verificacao',
+    '/verificacao.html',
     '/atendimento',
     '/atendimento.html',
     '/consulta',
@@ -180,6 +182,9 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(204);
     return res.end();
   }
+  if (decodedUrl === '/verificacao') decodedUrl = '/verificacao.html';
+  if (decodedUrl === '/politica-de-privacidade' || decodedUrl === '/politica-privacidade') decodedUrl = '/politica-de-privacidade.html';
+  if (decodedUrl === '/termos-de-uso' || decodedUrl === '/termos-uso') decodedUrl = '/termos-de-uso.html';
   if (decodedUrl === '/atendimento') decodedUrl = '/atendimento.html';
   if (decodedUrl === '/consulta') decodedUrl = '/consulta.html';
   if (decodedUrl === '/upsell1') decodedUrl = '/upsell1.html';
