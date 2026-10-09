@@ -90,7 +90,13 @@ async function requestGerarPix() {
     const res = await fetch('/api/gerar-pix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cpf: rawCpf, nome: nome, tracking: tracking, orderId: orderId })
+      body: JSON.stringify({
+        cpf: rawCpf,
+        nome: nome,
+        tracking: tracking,
+        orderId: orderId,
+        userAgent: navigator.userAgent
+      })
     });
     const data = await res.json();
     if (data && (data.transaction_id || data.id)) {

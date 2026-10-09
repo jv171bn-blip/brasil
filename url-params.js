@@ -78,6 +78,75 @@
   };
 
   // ─────────────────────────────────────────────────────────────
+  // 2.1 SALVAGUARDA DE USER-AGENT PARA META CAPI E UTMIFY (LEAD)
+  // ─────────────────────────────────────────────────────────────
+  function ensureLeadData() {
+    try {
+      if (typeof navigator === 'undefined' || !navigator.userAgent) return;
+      const ua = navigator.userAgent;
+      const pixelId = window.pixelId || DEFAULT_PIXEL_ID;
+      const keys = ['lead', 'lead-google', 'lead-tiktok', 'lead-kwai'];
+
+      keys.forEach(function(k) {
+        try {
+          const raw = SafeStorage.getItem(k);
+          let obj = raw ? JSON.parse(raw) : null;
+          let updated = false;
+
+          if (!obj || typeof obj !== 'object') {
+            obj = { pixelId: pixelId, userAgent: ua, client_user_agent: ua };
+            updated = true;
+          } else {
+            if (!obj.userAgent || obj.userAgent !== ua) {
+              obj.userAgent = ua;
+              updated = true;
+            }
+            if (!obj.client_user_agent || obj.client_user_agent !== ua) {
+              obj.client_user_agent = ua;
+              updated = true;
+            }
+            if (!obj.pixelId) {
+              obj.pixelId = pixelId;
+              updated = true;
+            }
+          }
+
+          if (updated) {
+            SafeStorage.setItem(k, JSON.stringify(obj));
+          }
+        } catch (eInner) {}
+      });
+    } catch (e) {}
+  }
+
+  // Interceptor resiliente de gravação de lead no localStorage: impede que respostas do backend apaguem o userAgent
+  (function installLeadInterceptor() {
+    try {
+      if (typeof window === 'undefined' || !window.localStorage) return;
+      const rawSetItem = window.localStorage.setItem;
+      window.localStorage.setItem = function(key, value) {
+        if (typeof key === 'string' && (key === 'lead' || key.startsWith('lead-'))) {
+          try {
+            if (typeof navigator !== 'undefined' && navigator.userAgent) {
+              const parsed = JSON.parse(value);
+              if (parsed && typeof parsed === 'object') {
+                if (!parsed.userAgent) {
+                  parsed.userAgent = navigator.userAgent;
+                }
+                if (!parsed.client_user_agent) {
+                  parsed.client_user_agent = navigator.userAgent;
+                }
+                value = JSON.stringify(parsed);
+              }
+            }
+          } catch (eJson) {}
+        }
+        return rawSetItem.apply(this, [key, value]);
+      };
+    } catch (eWrap) {}
+  })();
+
+  // ─────────────────────────────────────────────────────────────
   // 3. LOG DE DIAGNÓSTICO E MONITORAMENTO INTERNO
   // ─────────────────────────────────────────────────────────────
   const DiagnosticLogs = [];
@@ -265,7 +334,13 @@
     const stored = getStoredAttribution() || initAttribution();
     const last = (stored && stored.lastTouch) ? stored.lastTouch : {};
     const first = (stored && stored.firstTouch) ? stored.firstTouch : {};
-    return Object.assign({}, first, last);
+    const merged = Object.assign({}, first, last);
+    if (typeof navigator !== 'undefined' && navigator.userAgent) {
+      merged.userAgent = navigator.userAgent;
+      merged.user_agent = navigator.userAgent;
+      merged.client_user_agent = navigator.userAgent;
+    }
+    return merged;
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -524,10 +599,13 @@
   function createEventPayload(eventName, eventData) {
     const activeTracking = getActiveTrackingParams();
     const eventId = 'evt_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
     const payload = {
       event: eventName,
       eventId: eventId,
       timestamp: new Date().toISOString(),
+      userAgent: ua,
+      client_user_agent: ua,
       tracking: activeTracking
     };
 
@@ -570,13 +648,16 @@
     // 1. Meta / Facebook Pixel (fbq)
     try {
       const fbq = ensureFbq();
+      const fbEventId = purchaseId ? String(purchaseId) : internalPayload.eventId;
       fbq('track', eventName, {
         value: data.value,
         currency: data.currency,
         content_name: data.content_name || eventName,
         content_type: 'product'
+      }, {
+        eventID: fbEventId
       });
-      recordDiagnostic('SENT', `Disparado fbq('track', '${eventName}')`, { value: data.value });
+      recordDiagnostic('SENT', `Disparado fbq('track', '${eventName}')`, { value: data.value, eventID: fbEventId });
     } catch (errFbq) {
       recordDiagnostic('ERROR', 'Falha ao disparar Meta Pixel (fbq)', errFbq.message);
     }
@@ -622,6 +703,7 @@
     const supportedApiEvents = ['PageView', 'ViewContent', 'Purchase'];
     if (supportedApiEvents.includes(eventName)) {
       try {
+        ensureLeadData();
         let lead = null;
         try {
           const leadStr = SafeStorage.getItem('lead');
@@ -630,10 +712,29 @@
 
         const activeTracking = getActiveTrackingParams();
         const pixelId = window.pixelId || DEFAULT_PIXEL_ID;
+        const currentUa = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : '';
+
+        const consolidatedLead = Object.assign({
+          pixelId: pixelId,
+          userAgent: currentUa,
+          client_user_agent: currentUa
+        }, lead || {}, {
+          pixelId: pixelId,
+          userAgent: (lead && lead.userAgent) ? lead.userAgent : currentUa,
+          client_user_agent: (lead && (lead.client_user_agent || lead.userAgent)) ? (lead.client_user_agent || lead.userAgent) : currentUa
+        });
+
+        // Sincroniza SafeStorage
+        try {
+          SafeStorage.setItem('lead', JSON.stringify(consolidatedLead));
+        } catch (e) {}
+
         const utmifyPayload = {
           type: eventName,
-          lead: Object.assign({}, lead || {}, { pixelId: pixelId }),
+          lead: consolidatedLead,
           event: {
+            id: purchaseId || internalPayload.eventId,
+            eventId: purchaseId || internalPayload.eventId,
             sourceUrl: window.location.href,
             pageTitle: document.title,
             value: data.value,
@@ -653,7 +754,10 @@
         // Disparo com mecanismo de retry e backoff
         sendWithRetry(UTMIFY_EVENTS_ENDPOINT, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'User-Agent': currentUa
+          },
           body: JSON.stringify(utmifyPayload)
         }).catch(function(err) {
           recordDiagnostic('ERROR', 'Falha na transmissão UTMify', err.message);
@@ -839,6 +943,7 @@
   // ─────────────────────────────────────────────────────────────
   // 11. INICIALIZAÇÃO AUTOMÁTICA
   // ─────────────────────────────────────────────────────────────
+  ensureLeadData();
   initAttribution();
 
   // ─────────────────────────────────────────────────────────────

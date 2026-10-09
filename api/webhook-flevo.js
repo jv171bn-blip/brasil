@@ -83,13 +83,63 @@ module.exports = async function handler(req, res) {
 
     if (!pedido) {
       console.warn(`[Webhook Pagamento] Pedido com ID "${transactionId}" não localizado no banco local. Criando registro com tracking fallback.`);
+      const fallbackIp = (
+        (payload.customer && (payload.customer.ip || payload.customer.client_ip)) ||
+        (payload.metadata && (payload.metadata.ip || payload.metadata.client_ip)) ||
+        (req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || (req.socket && req.socket.remoteAddress) || '').split(',')[0].trim() ||
+        null
+      );
+      const fallbackUa = (
+        (payload.customer && (payload.customer.userAgent || payload.customer.user_agent || payload.customer.client_user_agent)) ||
+        (payload.metadata && (payload.metadata.userAgent || payload.metadata.user_agent || payload.metadata.client_user_agent)) ||
+        payload.client_user_agent ||
+        payload.userAgent ||
+        req.headers['user-agent'] ||
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      );
       pedido = await salvarPedidoComAtribuicao({
         orderId: 'ORD-' + transactionId,
         transactionId: transactionId,
         amount: payload.amount || (payload.data && payload.data.amount) || 68.92,
         status: isPaid ? 'paid' : 'pending',
+        customer: {
+          name: (payload.customer && payload.customer.name) || 'Cliente',
+          email: (payload.customer && payload.customer.email) || null,
+          phone: (payload.customer && payload.customer.phone) || null,
+          ip: fallbackIp,
+          userAgent: fallbackUa,
+          user_agent: fallbackUa
+        },
+        ip: fallbackIp,
+        userAgent: fallbackUa,
+        user_agent: fallbackUa,
         tracking: (payload.metadata || payload.tracking || (payload.data && payload.data.metadata) || {})
       });
+    } else {
+      // Garante que IP e User-Agent estão preenchidos mesmo em pedidos criados antes da atualização
+      if (!pedido.customer) pedido.customer = {};
+      if (!pedido.customer.userAgent && !pedido.userAgent) {
+        const foundUa = (
+          (payload.customer && (payload.customer.userAgent || payload.customer.user_agent || payload.customer.client_user_agent)) ||
+          (payload.metadata && (payload.metadata.userAgent || payload.metadata.user_agent || payload.metadata.client_user_agent)) ||
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        );
+        pedido.customer.userAgent = foundUa;
+        pedido.customer.user_agent = foundUa;
+        pedido.userAgent = foundUa;
+        pedido.user_agent = foundUa;
+      }
+      if (!pedido.customer.ip && !pedido.ip) {
+        const foundIp = (
+          (payload.customer && (payload.customer.ip || payload.customer.client_ip)) ||
+          (payload.metadata && (payload.metadata.ip || payload.metadata.client_ip)) ||
+          null
+        );
+        if (foundIp) {
+          pedido.customer.ip = foundIp;
+          pedido.ip = foundIp;
+        }
+      }
     }
 
     // Se o pagamento foi confirmado

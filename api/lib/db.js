@@ -239,15 +239,26 @@ async function salvarPedidoComAtribuicao(params = {}) {
   const docRaw = String(customer.document || customer.cpf || '').replace(/\D/g, '');
   const docMasked = docRaw ? (docRaw.slice(0, 3) + '*****' + docRaw.slice(-2)) : '';
 
+  const clientIp = customer.ip || params.ip || null;
+  const clientUa = customer.userAgent || customer.user_agent || customer.client_user_agent || params.userAgent || params.user_agent || null;
+
   const novoPedido = {
     order_id: oId,
     transaction_id: tId,
     amount: typeof amount === 'number' ? amount : parseFloat(amount) || 0,
     status: status,
     is_paid: (status === 'paid' || status === 'approved'),
+    ip: clientIp,
+    userAgent: clientUa,
+    user_agent: clientUa,
     customer: {
       name: customer.name || 'Cliente',
-      document_masked: docMasked
+      document_masked: docMasked,
+      email: customer.email || null,
+      phone: customer.phone || null,
+      ip: clientIp,
+      userAgent: clientUa,
+      user_agent: clientUa
     },
     tracking: {
       utm_source: tracking.utm_source || null,
@@ -270,8 +281,13 @@ async function salvarPedidoComAtribuicao(params = {}) {
 
   const idx = ordersList.findIndex(o => (tId && o.transaction_id === tId) || (oId && o.order_id === oId));
   if (idx >= 0) {
-    ordersList[idx] = Object.assign(ordersList[idx], novoPedido, {
-      created_at: ordersList[idx].created_at,
+    const existing = ordersList[idx];
+    ordersList[idx] = Object.assign({}, existing, novoPedido, {
+      customer: Object.assign({}, existing.customer || {}, novoPedido.customer),
+      ip: novoPedido.ip || existing.ip || null,
+      userAgent: novoPedido.userAgent || existing.userAgent || null,
+      user_agent: novoPedido.user_agent || existing.user_agent || null,
+      created_at: existing.created_at,
       updated_at: new Date().toISOString()
     });
   } else {
@@ -288,7 +304,15 @@ async function salvarPedidoComAtribuicao(params = {}) {
 async function atualizarStatusPedido(transactionId, status) {
   initOrdersStorage();
   const tId = String(transactionId || '').trim();
-  const idx = ordersList.findIndex(o => o.transaction_id === tId || o.order_id === tId);
+  let idx = ordersList.findIndex(o => o.transaction_id === tId || o.order_id === tId);
+  if (idx < 0 && fs.existsSync(ORDERS_FILE)) {
+    try {
+      const raw = fs.readFileSync(ORDERS_FILE, 'utf8');
+      ordersList = JSON.parse(raw);
+      if (!Array.isArray(ordersList)) ordersList = [];
+      idx = ordersList.findIndex(o => o.transaction_id === tId || o.order_id === tId);
+    } catch (e) {}
+  }
   if (idx >= 0) {
     ordersList[idx].status = status;
     ordersList[idx].is_paid = (status === 'paid' || status === 'approved');
@@ -305,7 +329,16 @@ async function atualizarStatusPedido(transactionId, status) {
 async function obterPedido(id) {
   initOrdersStorage();
   const query = String(id || '').trim();
-  return ordersList.find(o => o.transaction_id === query || o.order_id === query) || null;
+  let found = ordersList.find(o => o.transaction_id === query || o.order_id === query);
+  if (!found && fs.existsSync(ORDERS_FILE)) {
+    try {
+      const raw = fs.readFileSync(ORDERS_FILE, 'utf8');
+      ordersList = JSON.parse(raw);
+      if (!Array.isArray(ordersList)) ordersList = [];
+      found = ordersList.find(o => o.transaction_id === query || o.order_id === query);
+    } catch (e) {}
+  }
+  return found || null;
 }
 
 /**

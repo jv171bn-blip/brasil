@@ -72,6 +72,15 @@ module.exports = async function handler(req, res) {
               pedido = await atualizarStatusPedido(transactionId, 'paid');
               if (pedido && !pedido.utmify_paid_synced) {
                 pedido.utmify_paid_synced = true;
+                if (!pedido.customer) pedido.customer = {};
+                if (!pedido.customer.userAgent && !pedido.userAgent) {
+                  pedido.customer.userAgent = req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+                  pedido.userAgent = pedido.customer.userAgent;
+                }
+                if (!pedido.customer.ip && !pedido.ip) {
+                  pedido.customer.ip = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim() || null;
+                  pedido.ip = pedido.customer.ip;
+                }
                 const { enviarPedidoUtmify } = require('./lib/utmify.js');
                 enviarPedidoUtmify(pedido, 'paid').catch(e => {
                   console.warn('[verificar-pix] Erro ao sincronizar venda aprovada com UTMify:', e.message);

@@ -205,7 +205,7 @@
                 const res = await fetch('/generate-pix-upsell2', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ...userData, amount: 27.65, tracking: tracking, orderId: orderId })
+                    body: JSON.stringify({ ...userData, amount: 27.65, tracking: tracking, orderId: orderId, userAgent: navigator.userAgent })
                 });
                 const data = await res.json();
                 

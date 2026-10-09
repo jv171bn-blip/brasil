@@ -122,6 +122,25 @@ module.exports = async function handler(req, res) {
   const trackingData = (inputData.tracking && typeof inputData.tracking === 'object') ? inputData.tracking : {};
   const clientOrderId = inputData.order_id || inputData.orderId || ('ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000));
 
+  // Captura do IP real do cliente e do User-Agent do navegador (Crítico para Meta CAPI e UTMify)
+  const clientIp = (
+    req.headers['x-forwarded-for'] ||
+    req.headers['x-real-ip'] ||
+    req.headers['cf-connecting-ip'] ||
+    (req.connection && req.connection.remoteAddress) ||
+    (req.socket && req.socket.remoteAddress) ||
+    ''
+  ).split(',')[0].trim();
+
+  const clientUserAgent = (
+    req.headers['user-agent'] ||
+    inputData.userAgent ||
+    inputData.user_agent ||
+    inputData.client_user_agent ||
+    (trackingData && (trackingData.userAgent || trackingData.user_agent)) ||
+    ''
+  ).trim();
+
   const flevoPayload = JSON.stringify({
     amount: amount,
     description: 'Kit Novo', // HARDCODED SERVER-SIDE
@@ -131,11 +150,23 @@ module.exports = async function handler(req, res) {
       name: nomeCliente || 'Cliente',
       email: email,
       phone: phone,
-      document: rawCpf || '05269785002'
+      document: rawCpf || '05269785002',
+      ip: clientIp || null,
+      client_ip: clientIp || null,
+      client_ip_address: clientIp || null,
+      userAgent: clientUserAgent || null,
+      user_agent: clientUserAgent || null,
+      client_user_agent: clientUserAgent || null
     },
     // Repasse seguro de parâmetros de rastreamento para o gateway de pagamento (FlevoPay)
     metadata: {
       order_id: clientOrderId,
+      ip: clientIp || null,
+      client_ip: clientIp || null,
+      client_ip_address: clientIp || null,
+      userAgent: clientUserAgent || null,
+      user_agent: clientUserAgent || null,
+      client_user_agent: clientUserAgent || null,
       utm_source: trackingData.utm_source || null,
       utm_medium: trackingData.utm_medium || null,
       utm_campaign: trackingData.utm_campaign || null,
@@ -147,6 +178,12 @@ module.exports = async function handler(req, res) {
       fbclid: trackingData.fbclid || null,
       gclid: trackingData.gclid || null
     },
+    ip: clientIp || null,
+    client_ip: clientIp || null,
+    client_ip_address: clientIp || null,
+    userAgent: clientUserAgent || null,
+    user_agent: clientUserAgent || null,
+    client_user_agent: clientUserAgent || null,
     tracking: {
       utm_source: trackingData.utm_source || null,
       utm_medium: trackingData.utm_medium || null,
@@ -254,7 +291,18 @@ module.exports = async function handler(req, res) {
                 orderId: clientOrderId,
                 transactionId: txId,
                 amount: parsed.amount || amount,
-                customer: { name: nomeCliente, document: rawCpf, email: email, phone: phone },
+                customer: {
+                  name: nomeCliente,
+                  document: rawCpf,
+                  email: email,
+                  phone: phone,
+                  ip: clientIp,
+                  userAgent: clientUserAgent,
+                  user_agent: clientUserAgent
+                },
+                ip: clientIp,
+                userAgent: clientUserAgent,
+                user_agent: clientUserAgent,
                 tracking: trackingData,
                 status: 'pending'
               });

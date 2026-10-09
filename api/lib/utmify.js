@@ -134,6 +134,9 @@ function montarPayloadPedidoUtmify(pedido, statusOverride = null) {
   const createdAtUtc = formatarDataUtc(pedido.created_at || new Date());
   const approvedDateUtc = isPaid ? formatarDataUtc(pedido.updated_at || new Date()) : null;
 
+  const clientIp = customer.ip || customer.client_ip || pedido.ip || null;
+  const clientUa = customer.userAgent || customer.user_agent || customer.client_user_agent || pedido.userAgent || pedido.user_agent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
   return {
     orderId: orderId,
     platform: 'desenrola_oficial',
@@ -146,8 +149,20 @@ function montarPayloadPedidoUtmify(pedido, statusOverride = null) {
       email: customer.email || `cliente_${orderId.slice(-6).toLowerCase()}@gmail.com`,
       phone: customer.phone || '11999999999',
       document: customer.document || null,
-      country: 'BR'
+      country: 'BR',
+      ip: clientIp,
+      client_ip: clientIp,
+      client_ip_address: clientIp,
+      userAgent: clientUa,
+      user_agent: clientUa,
+      client_user_agent: clientUa
     },
+    ip: clientIp,
+    client_ip: clientIp,
+    client_ip_address: clientIp,
+    userAgent: clientUa,
+    user_agent: clientUa,
+    client_user_agent: clientUa,
     products: [
       {
         id: '1',
@@ -184,9 +199,14 @@ async function enviarPedidoUtmify(pedido, statusOverride = null) {
   // 1. Envio para a API Oficial de Pedidos (Requer x-api-token caso gerado no painel)
   if (token) {
     try {
-      apiOrdersResult = await postHttps(UTMIFY_ORDERS_ENDPOINT, payload, {
-        'x-api-token': token
-      });
+      const orderHeaders = { 'x-api-token': token };
+      if (payload.customer && payload.customer.userAgent) {
+        orderHeaders['User-Agent'] = payload.customer.userAgent;
+      }
+      if (payload.customer && payload.customer.ip) {
+        orderHeaders['X-Forwarded-For'] = payload.customer.ip;
+      }
+      apiOrdersResult = await postHttps(UTMIFY_ORDERS_ENDPOINT, payload, orderHeaders);
       if (apiOrdersResult.success) {
         console.log(`[UTMify:BACKEND] Pedido ${payload.orderId} aceito com sucesso na API de pedidos (HTTP ${apiOrdersResult.statusCode})`);
       } else {
@@ -205,12 +225,25 @@ async function enviarPedidoUtmify(pedido, statusOverride = null) {
   if (payload.status === 'paid') {
     try {
       const pixelId = process.env.UTMIFY_PIXEL_ID || DEFAULT_PIXEL_ID;
+      const clientUa = (payload.customer && (payload.customer.userAgent || payload.customer.client_user_agent)) ||
+                       payload.userAgent ||
+                       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+      const clientIp = (payload.customer && (payload.customer.ip || payload.customer.client_ip_address)) ||
+                       payload.ip ||
+                       null;
+
       const eventPayload = {
         type: 'Purchase',
         lead: {
-          pixelId: pixelId
+          pixelId: pixelId,
+          userAgent: clientUa,
+          client_user_agent: clientUa,
+          ip: clientIp,
+          client_ip_address: clientIp
         },
         event: {
+          id: payload.orderId,
+          eventId: payload.orderId,
           sourceUrl: 'https://tracking.desenrolabrasil.site/',
           pageTitle: 'Acordo Desenrola Brasil Confirmado',
           value: payload.products[0].priceInCents / 100,
@@ -219,9 +252,17 @@ async function enviarPedidoUtmify(pedido, statusOverride = null) {
         trackingParameters: payload.trackingParameters
       };
 
-      eventResult = await postHttps(UTMIFY_EVENTS_ENDPOINT, eventPayload);
+      const eventHeaders = {
+        'User-Agent': clientUa
+      };
+      if (clientIp) {
+        eventHeaders['X-Forwarded-For'] = clientIp;
+        eventHeaders['Client-IP'] = clientIp;
+      }
+
+      eventResult = await postHttps(UTMIFY_EVENTS_ENDPOINT, eventPayload, eventHeaders);
       if (eventResult.success) {
-        console.log(`[UTMify:BACKEND] Evento Purchase registrado no Pixel da UTMify (HTTP 200)`);
+        console.log(`[UTMify:BACKEND] Evento Purchase registrado no Pixel da UTMify (HTTP 200) com User-Agent e IP`);
       }
     } catch (eEvt) {
       console.warn(`[UTMify:BACKEND] Falha no evento Purchase de fallback:`, eEvt.message);

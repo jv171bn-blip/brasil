@@ -302,7 +302,9 @@ const utmifyProxy = http.createServer((req, res) => {
       headers: {
         'Content-Type': req.headers['content-type'] || 'application/json',
         'Content-Length': bodyBuf.length,
-        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0'
+        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'X-Forwarded-For': req.headers['x-forwarded-for'] || req.socket.remoteAddress || '',
+        'Client-IP': req.socket.remoteAddress || ''
       }
     }, pRes => {
       res.writeHead(pRes.statusCode, pRes.headers);
