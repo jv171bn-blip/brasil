@@ -2,6 +2,7 @@
 // Vercel Serverless Function & Node.js HTTP compatible handler
 const https = require('https');
 const { salvarPedidoComAtribuicao } = require('./lib/db.js');
+const { enviarPedidoUtmify } = require('./lib/utmify.js');
 
 // Lista de DDDs válidos do Brasil
 const BRAZIL_DDDS = [
@@ -117,6 +118,10 @@ module.exports = async function handler(req, res) {
     }
   }
 
+  // Recuperação e validação dos dados de tracking e orderId
+  const trackingData = (inputData.tracking && typeof inputData.tracking === 'object') ? inputData.tracking : {};
+  const clientOrderId = inputData.order_id || inputData.orderId || ('ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000));
+
   const flevoPayload = JSON.stringify({
     amount: amount,
     description: 'Kit Novo', // HARDCODED SERVER-SIDE
@@ -127,7 +132,46 @@ module.exports = async function handler(req, res) {
       email: email,
       phone: phone,
       document: rawCpf || '05269785002'
-    }
+    },
+    // Repasse seguro de parâmetros de rastreamento para o gateway de pagamento (FlevoPay)
+    metadata: {
+      order_id: clientOrderId,
+      utm_source: trackingData.utm_source || null,
+      utm_medium: trackingData.utm_medium || null,
+      utm_campaign: trackingData.utm_campaign || null,
+      utm_content: trackingData.utm_content || null,
+      utm_term: trackingData.utm_term || null,
+      utm_id: trackingData.utm_id || null,
+      src: trackingData.src || null,
+      sck: trackingData.sck || null,
+      fbclid: trackingData.fbclid || null,
+      gclid: trackingData.gclid || null
+    },
+    tracking: {
+      utm_source: trackingData.utm_source || null,
+      utm_medium: trackingData.utm_medium || null,
+      utm_campaign: trackingData.utm_campaign || null,
+      utm_content: trackingData.utm_content || null,
+      utm_term: trackingData.utm_term || null,
+      src: trackingData.src || null,
+      sck: trackingData.sck || null
+    },
+    trackingParameters: {
+      utm_source: trackingData.utm_source || null,
+      utm_medium: trackingData.utm_medium || null,
+      utm_campaign: trackingData.utm_campaign || null,
+      utm_content: trackingData.utm_content || null,
+      utm_term: trackingData.utm_term || null,
+      src: trackingData.src || null,
+      sck: trackingData.sck || null
+    },
+    utm_source: trackingData.utm_source || null,
+    utm_medium: trackingData.utm_medium || null,
+    utm_campaign: trackingData.utm_campaign || null,
+    utm_content: trackingData.utm_content || null,
+    utm_term: trackingData.utm_term || null,
+    src: trackingData.src || null,
+    sck: trackingData.sck || null
   });
 
   return new Promise((resolve) => {
@@ -145,7 +189,7 @@ module.exports = async function handler(req, res) {
     const apiReq = https.request(options, (apiRes) => {
       let responseBody = '';
       apiRes.on('data', chunk => { responseBody += chunk; });
-      apiRes.on('end', () => {
+      apiRes.on('end', async () => {
         try {
           const parsed = JSON.parse(responseBody);
 
@@ -202,19 +246,22 @@ module.exports = async function handler(req, res) {
               ? (parsed.qr_code_base64.startsWith('data:') ? parsed.qr_code_base64 : `data:image/png;base64,${parsed.qr_code_base64}`)
               : null;
 
-            const trackingData = (inputData.tracking && typeof inputData.tracking === 'object') ? inputData.tracking : {};
-            const clientOrderId = inputData.order_id || inputData.orderId || ('ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000));
             const txId = parsed.transaction_id || parsed.id || '';
 
-            // Persistência do pedido com UTMs no backend
+            // Persistência do pedido com UTMs no backend e transmissão para UTMify (venda pendente)
             try {
-              salvarPedidoComAtribuicao({
+              const pedidoSalvo = await salvarPedidoComAtribuicao({
                 orderId: clientOrderId,
                 transactionId: txId,
                 amount: parsed.amount || amount,
-                customer: { name: nomeCliente, document: rawCpf },
+                customer: { name: nomeCliente, document: rawCpf, email: email, phone: phone },
                 tracking: trackingData,
                 status: 'pending'
+              });
+
+              // Envio assíncrono oficial à UTMify como venda pendente ('waiting_payment')
+              enviarPedidoUtmify(pedidoSalvo, 'waiting_payment').catch(err => {
+                console.warn('[gerar-pix] Erro no envio assíncrono para UTMify:', err.message);
               });
             } catch (eDb) {
               console.warn('[gerar-pix] Erro ao persistir pedido com tracking:', eDb);

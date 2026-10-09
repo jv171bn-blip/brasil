@@ -122,7 +122,7 @@ async function runTests() {
   }, mockStorage, mockStorage);
 
   // -------------------------------------------------------------------------
-  // TESTE A: Entrada com UTMs
+  // TESTE A: Entrada com UTMs e Sincronização de Expiração para latest.js
   // -------------------------------------------------------------------------
   try {
     const rawAttribution = mockStorage.getItem('utmify_attribution');
@@ -132,12 +132,16 @@ async function runTests() {
     const utmCampaign = parsedAttribution.firstTouch.utm_campaign;
     const fbclid = parsedAttribution.firstTouch.fbclid;
     const hasSync = mockStorage.getItem('utm_source') === 'facebook';
+    const hasExpSync = !!mockStorage.getItem('utm_source_exp'); // Exigido pelo latest.js da UTMify
 
-    const ok = utmSource === 'facebook' && utmCampaign === 'teste123' && fbclid === 'fb_test_123' && hasSync;
-    reportTest('Teste A', 'Entrada com UTMs (Captura e Persistência no Local Storage)', ok, {
+    const ok = utmSource === 'facebook' && utmCampaign === 'teste123' && fbclid === 'fb_test_123' && hasSync && hasExpSync;
+    reportTest('Teste A', 'Entrada com UTMs (Captura, Persistência LocalStorage e TTL para latest.js)', ok, {
       firstTouch: parsedAttribution.firstTouch,
       lastTouch: parsedAttribution.lastTouch,
-      storageSync: { utm_source: mockStorage.getItem('utm_source') }
+      storageSync: {
+        utm_source: mockStorage.getItem('utm_source'),
+        utm_source_exp: mockStorage.getItem('utm_source_exp')
+      }
     });
   } catch (err) {
     reportTest('Teste A', 'Entrada com UTMs', false, err.message);
@@ -246,10 +250,12 @@ async function runTests() {
   }
 
   // -------------------------------------------------------------------------
-  // TESTE F: Checkout PIX com persistência no backend
+  // TESTE F: Checkout PIX com parâmetros exatos solicitados no prompt
   // -------------------------------------------------------------------------
+  let generatedTransactionId = null;
+  const testOrderId = 'order_test_audit_' + Date.now().toString(36);
+
   try {
-    const testOrderId = 'order_test_audit_' + Date.now().toString(36);
     const pixResponse = await makeRequest('http://localhost:3000/api/gerar-pix', {
       method: 'POST'
     }, {
@@ -260,11 +266,13 @@ async function runTests() {
       tracking: {
         utm_source: 'facebook',
         utm_medium: 'paid',
-        utm_campaign: 'campanha_audit_01'
+        utm_campaign: 'teste123',
+        utm_content: 'criativo01'
       }
     });
 
-    const pixOk = pixResponse.statusCode === 200 && pixResponse.json && (pixResponse.json.transaction_id || pixResponse.json.pix_code);
+    generatedTransactionId = pixResponse.json ? (pixResponse.json.transaction_id || pixResponse.json.id) : null;
+    const pixOk = pixResponse.statusCode === 200 && !!generatedTransactionId;
 
     // Consulta endpoint de pedidos para verificar persistência no banco
     const pedidosResponse = await makeRequest('http://localhost:3000/api/pedidos', { method: 'GET' });
@@ -272,11 +280,17 @@ async function runTests() {
       ? pedidosResponse.json.pedidos.find(p => p.order_id === testOrderId)
       : null;
 
-    const dbOk = pedidoSalvo && pedidoSalvo.tracking && pedidoSalvo.tracking.utm_campaign === 'campanha_audit_01';
+    const dbOk = pedidoSalvo &&
+                 pedidoSalvo.tracking &&
+                 pedidoSalvo.tracking.utm_source === 'facebook' &&
+                 pedidoSalvo.tracking.utm_campaign === 'teste123' &&
+                 pedidoSalvo.tracking.utm_content === 'criativo01' &&
+                 pedidoSalvo.status === 'pending';
 
     const ok = pixOk && dbOk;
-    reportTest('Teste F', 'Checkout PIX e Persistência de Atribuição no Backend (.data/pedidos.json)', ok, {
-      transactionId: pixResponse.json ? pixResponse.json.transaction_id : null,
+    reportTest('Teste F', 'Checkout PIX com UTMs exatas preservadas no Backend (.data/pedidos.json)', ok, {
+      transactionId: generatedTransactionId,
+      status: pedidoSalvo ? pedidoSalvo.status : null,
       savedInDatabase: !!pedidoSalvo,
       persistedTracking: pedidoSalvo ? pedidoSalvo.tracking : null,
       cpfMasked: pedidoSalvo ? pedidoSalvo.cpf_mascarado : null
@@ -286,50 +300,58 @@ async function runTests() {
   }
 
   // -------------------------------------------------------------------------
-  // TESTE G: Pagamento aprovado (Conversão condicionada ao backend)
+  // TESTE G: Webhook de Pagamento Aprovado e Sincronização Oficial com UTMify
   // -------------------------------------------------------------------------
   try {
-    const db = require('./api/lib/db.js');
-    const testOrderId = 'order_verif_' + Date.now().toString(36);
-    const testTxId = 'tx_verif_' + Date.now().toString(36);
+    const txIdToPay = generatedTransactionId || ('TX_TEST_' + Date.now().toString(36));
 
-    // Salva pedido em estado pending
-    await db.salvarPedidoComAtribuicao({
-      order_id: testOrderId,
-      transaction_id: testTxId,
-      amount: 68.92,
-      tracking: { utm_source: 'google' }
+    // 1. Simula envio de webhook oficial do gateway de pagamentos
+    const webhookRes = await makeRequest('http://localhost:3000/api/webhook-flevo', {
+      method: 'POST'
+    }, {
+      transaction_id: txIdToPay,
+      status: 'paid',
+      amount: 68.92
     });
 
-    let pedidoAntes = await db.obterPedido(testTxId);
-    const initialStatus = pedidoAntes ? pedidoAntes.status : null;
-    const pendingStatusOk = initialStatus === 'pending';
+    const webhookOk = webhookRes.statusCode === 200 && webhookRes.json && webhookRes.json.status === 'paid';
 
-    // Simula confirmação oficial de pagamento
-    await db.atualizarStatusPedido(testTxId, 'paid');
-    let pedidoDepois = await db.obterPedido(testTxId);
-    const confirmedStatus = pedidoDepois ? pedidoDepois.status : null;
-    const paidStatusOk = confirmedStatus === 'paid' && pedidoDepois.is_paid === true;
+    // 2. Consulta banco de dados para confirmar transição atômica
+    const db = require('./api/lib/db.js');
+    const pedidoAposWebhook = await db.obterPedido(txIdToPay);
+    const dbPaidOk = pedidoAposWebhook && pedidoAposWebhook.status === 'paid' && pedidoAposWebhook.is_paid === true;
 
-    // Disparo condicionado
-    let purchaseSent = false;
-    if (pedidoDepois && pedidoDepois.is_paid === true) {
-      const res = await mockWindow.trackPixelEvent('Purchase', {
-        orderId: testOrderId,
-        transactionId: testTxId,
-        value: 68.92
-      });
-      purchaseSent = res.success === true;
-    }
+    // 3. Validação do schema oficial do payload que vai para a UTMify
+    const utmifyLib = require('./api/lib/utmify.js');
+    const payloadMontado = utmifyLib.montarPayloadPedidoUtmify(pedidoAposWebhook, 'paid');
+    const schemaOk = payloadMontado.orderId &&
+                     payloadMontado.status === 'paid' &&
+                     payloadMontado.approvedDate !== null &&
+                     payloadMontado.trackingParameters &&
+                     payloadMontado.trackingParameters.utm_source === 'facebook' &&
+                     payloadMontado.trackingParameters.utm_campaign === 'teste123' &&
+                     payloadMontado.trackingParameters.utm_content === 'criativo01';
 
-    const ok = pendingStatusOk && paidStatusOk && purchaseSent;
-    reportTest('Teste G', 'Pagamento Aprovado (Purchase condicionado estritamente à confirmação do backend)', ok, {
-      initialStatus: initialStatus,
-      confirmedStatus: confirmedStatus,
-      purchaseEventDispatched: purchaseSent
+    // 4. Teste de Idempotência do Webhook (reenvio não deve duplicar)
+    const duplicateWebhookRes = await makeRequest('http://localhost:3000/api/webhook-flevo', {
+      method: 'POST'
+    }, {
+      transaction_id: txIdToPay,
+      status: 'paid',
+      amount: 68.92
+    });
+    const idempotencyOk = duplicateWebhookRes.statusCode === 200 && duplicateWebhookRes.json && duplicateWebhookRes.json.idempotent === true;
+
+    const ok = webhookOk && dbPaidOk && schemaOk && idempotencyOk;
+    reportTest('Teste G', 'Webhook de Pagamento Aprovado (Recuperação de UTMs, Schema Oficial e Idempotência)', ok, {
+      webhookStatus: webhookRes.statusCode,
+      orderStatus: pedidoAposWebhook ? pedidoAposWebhook.status : null,
+      isPaid: pedidoAposWebhook ? pedidoAposWebhook.is_paid : null,
+      utmifyTrackingParams: payloadMontado.trackingParameters,
+      idempotencyWorking: idempotencyOk
     });
   } catch (err) {
-    reportTest('Teste G', 'Pagamento Aprovado', false, err.message);
+    reportTest('Teste G', 'Pagamento Aprovado e Webhook', false, err.message);
   }
 
   // -------------------------------------------------------------------------

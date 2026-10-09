@@ -2,6 +2,9 @@
   "version": 2,
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/webhook", "destination": "/api/webhook-flevo" },
+    { "source": "/webhook-flevo", "destination": "/api/webhook-flevo" },
+    { "source": "/webhook-pagamento", "destination": "/api/webhook-flevo" },
     { "source": "/check-payment/(.*)", "destination": "/api/verificar-pix?id=$1" },
     { "source": "/check-payment", "destination": "/api/verificar-pix" },
     { "source": "/generate-pix-upsell2", "destination": "/api/gerar-pix?amount=27.65" },

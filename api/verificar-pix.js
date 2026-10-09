@@ -70,6 +70,13 @@ module.exports = async function handler(req, res) {
           try {
             if (isPaid) {
               pedido = await atualizarStatusPedido(transactionId, 'paid');
+              if (pedido && !pedido.utmify_paid_synced) {
+                pedido.utmify_paid_synced = true;
+                const { enviarPedidoUtmify } = require('./lib/utmify.js');
+                enviarPedidoUtmify(pedido, 'paid').catch(e => {
+                  console.warn('[verificar-pix] Erro ao sincronizar venda aprovada com UTMify:', e.message);
+                });
+              }
             } else {
               pedido = await obterPedido(transactionId);
             }

@@ -107,6 +107,20 @@ const server = http.createServer(async (req, res) => {
 
 
 
+  // Rotas de Webhook de Pagamento (FlevoPay / Gateway PIX -> UTMify)
+  if (pathname === '/webhook' || pathname === '/webhook-flevo' || pathname === '/webhook-pagamento') {
+    let rawBody = '';
+    req.on('data', chunk => { rawBody += chunk; });
+    req.on('end', () => {
+      try { req.body = rawBody ? JSON.parse(rawBody) : {}; } catch(e) { req.body = {}; }
+      req.query = Object.fromEntries(urlObj.searchParams);
+      delete require.cache[require.resolve('./api/webhook-flevo.js')];
+      const handler = require('./api/webhook-flevo.js');
+      return handler(req, res);
+    });
+    return;
+  }
+
   // Rotas compatíveis com polling de pagamento dos upsells
   if (pathname.startsWith('/check-payment')) {
     const parts = pathname.replace('/check-payment', '').split('/').filter(Boolean);

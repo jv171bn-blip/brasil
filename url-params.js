@@ -241,14 +241,18 @@
 
     // Sincroniza chaves individuais para máxima compatibilidade com `latest.js` e outros scripts de afiliados
     const effectiveParams = Object.assign({}, stored.lastTouch || {}, stored.firstTouch || {});
+    const expIso = new Date(Date.now() + ATTRIBUTION_TTL_MS).toISOString();
     Object.keys(effectiveParams).forEach(function(k) {
       SafeStorage.setItem(k, effectiveParams[k]);
+      // CRÍTICO: o script latest.js da UTMify exige `${key}_exp` para não expirar ou deletar as UTMs
+      SafeStorage.setItem(k + '_exp', expIso);
     });
 
     // Exposição em variáveis globais de compatibilidade
     if (typeof window !== 'undefined') {
       window.utmParams = Object.assign({}, effectiveParams);
       window.paramsList = Object.keys(effectiveParams);
+      window.itemExpInDays = 30;
     }
 
     return stored;
@@ -624,6 +628,7 @@
           if (leadStr) lead = JSON.parse(leadStr);
         } catch (e) {}
 
+        const activeTracking = getActiveTrackingParams();
         const pixelId = window.pixelId || DEFAULT_PIXEL_ID;
         const utmifyPayload = {
           type: eventName,
@@ -633,6 +638,15 @@
             pageTitle: document.title,
             value: data.value,
             currency: data.currency
+          },
+          trackingParameters: {
+            utm_source: activeTracking.utm_source || null,
+            utm_medium: activeTracking.utm_medium || null,
+            utm_campaign: activeTracking.utm_campaign || null,
+            utm_content: activeTracking.utm_content || null,
+            utm_term: activeTracking.utm_term || null,
+            src: activeTracking.src || null,
+            sck: activeTracking.sck || null
           }
         };
 
