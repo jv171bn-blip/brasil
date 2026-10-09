@@ -312,10 +312,16 @@
             btn.disabled = true;
 
             try {
+                const tracking = (window.UTMifyTracker && typeof window.UTMifyTracker.getTrackingParams === 'function')
+                    ? window.UTMifyTracker.getTrackingParams()
+                    : {};
+                const orderId = 'order_negociacao_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+                window._currentOrderId = orderId;
+
                 const res = await fetch('/generate-pix-upsell4', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ...userData, amount: 19.92 })
+                    body: JSON.stringify({ ...userData, amount: 19.92, tracking: tracking, orderId: orderId })
                 });
                 const data = await res.json();
                 
@@ -402,7 +408,9 @@
                             trackPixelEvent('Purchase', {
                                 value: 19.92,
                                 currency: 'BRL',
-                                content_name: 'Tarifas e Documentos de Liberação'
+                                content_name: 'Tarifas e Documentos de Liberação',
+                                orderId: data.order_id || window._currentOrderId,
+                                transactionId: transactionId
                             });
                         }
                         setTimeout(() => {

@@ -1,6 +1,7 @@
 // api/gerar-pix.js
 // Vercel Serverless Function & Node.js HTTP compatible handler
 const https = require('https');
+const { salvarPedidoComAtribuicao } = require('./lib/db.js');
 
 // Lista de DDDs válidos do Brasil
 const BRAZIL_DDDS = [
@@ -201,8 +202,27 @@ module.exports = async function handler(req, res) {
               ? (parsed.qr_code_base64.startsWith('data:') ? parsed.qr_code_base64 : `data:image/png;base64,${parsed.qr_code_base64}`)
               : null;
 
+            const trackingData = (inputData.tracking && typeof inputData.tracking === 'object') ? inputData.tracking : {};
+            const clientOrderId = inputData.order_id || inputData.orderId || ('ORD-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000));
+            const txId = parsed.transaction_id || parsed.id || '';
+
+            // Persistência do pedido com UTMs no backend
+            try {
+              salvarPedidoComAtribuicao({
+                orderId: clientOrderId,
+                transactionId: txId,
+                amount: parsed.amount || amount,
+                customer: { name: nomeCliente, document: rawCpf },
+                tracking: trackingData,
+                status: 'pending'
+              });
+            } catch (eDb) {
+              console.warn('[gerar-pix] Erro ao persistir pedido com tracking:', eDb);
+            }
+
             sendJson(200, {
               success: true,
+              order_id: clientOrderId,
               transaction_id: parsed.transaction_id,
               id: parsed.id,
               qr_code: parsed.qr_code,

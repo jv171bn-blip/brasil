@@ -181,9 +181,148 @@ async function removerSessao({ ip, deviceId }) {
   return true;
 }
 
+// -------------------------------------------------------------
+// CAMADA DE PERSISTÊNCIA DE PEDIDOS E ATRIBUIÇÃO (UTMs / UTMify)
+// -------------------------------------------------------------
+const ORDERS_FILE = path.join(DATA_DIR, 'pedidos.json');
+let ordersList = [];
+let ordersInitialized = false;
+
+function initOrdersStorage() {
+  if (ordersInitialized) return;
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    if (fs.existsSync(ORDERS_FILE)) {
+      const raw = fs.readFileSync(ORDERS_FILE, 'utf8');
+      ordersList = JSON.parse(raw);
+      if (!Array.isArray(ordersList)) ordersList = [];
+    } else {
+      fs.writeFileSync(ORDERS_FILE, JSON.stringify([], null, 2), 'utf8');
+      ordersList = [];
+    }
+  } catch (err) {
+    console.error('[DB] Erro ao inicializar pedidos.json:', err);
+    ordersList = [];
+  }
+  ordersInitialized = true;
+}
+
+function persistOrdersToDisk() {
+  try {
+    if (!fs.existsSync(DATA_DIR)) {
+      fs.mkdirSync(DATA_DIR, { recursive: true });
+    }
+    const tempFile = `${ORDERS_FILE}.tmp.${Date.now()}`;
+    fs.writeFileSync(tempFile, JSON.stringify(ordersList, null, 2), 'utf8');
+    fs.renameSync(tempFile, ORDERS_FILE);
+  } catch (err) {
+    console.error('[DB] Erro ao persistir pedidos.json:', err);
+  }
+}
+
+/**
+ * Salva ou atualiza um pedido vinculado a parâmetros de atribuição UTM.
+ */
+async function salvarPedidoComAtribuicao(params = {}) {
+  initOrdersStorage();
+
+  const oId = String(params.orderId || params.order_id || ('ORD-' + Date.now().toString(36).toUpperCase())).trim();
+  const tId = String(params.transactionId || params.transaction_id || '').trim();
+  const amount = params.amount;
+  const customer = params.customer || {};
+  const tracking = params.tracking || {};
+  const status = params.status || 'pending';
+
+  // Sanitização de dados do cliente respeitando LGPD (nunca expõe CPF integral para analytics)
+  const docRaw = String(customer.document || customer.cpf || '').replace(/\D/g, '');
+  const docMasked = docRaw ? (docRaw.slice(0, 3) + '*****' + docRaw.slice(-2)) : '';
+
+  const novoPedido = {
+    order_id: oId,
+    transaction_id: tId,
+    amount: typeof amount === 'number' ? amount : parseFloat(amount) || 0,
+    status: status,
+    is_paid: (status === 'paid' || status === 'approved'),
+    customer: {
+      name: customer.name || 'Cliente',
+      document_masked: docMasked
+    },
+    tracking: {
+      utm_source: tracking.utm_source || null,
+      utm_medium: tracking.utm_medium || null,
+      utm_campaign: tracking.utm_campaign || null,
+      utm_content: tracking.utm_content || null,
+      utm_term: tracking.utm_term || null,
+      utm_id: tracking.utm_id || null,
+      fbclid: tracking.fbclid || null,
+      gclid: tracking.gclid || null,
+      gbraid: tracking.gbraid || null,
+      wbraid: tracking.wbraid || null,
+      ttclid: tracking.ttclid || null,
+      src: tracking.src || null,
+      sck: tracking.sck || null
+    },
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
+
+  const idx = ordersList.findIndex(o => (tId && o.transaction_id === tId) || (oId && o.order_id === oId));
+  if (idx >= 0) {
+    ordersList[idx] = Object.assign(ordersList[idx], novoPedido, {
+      created_at: ordersList[idx].created_at,
+      updated_at: new Date().toISOString()
+    });
+  } else {
+    ordersList.push(novoPedido);
+  }
+
+  persistOrdersToDisk();
+  return novoPedido;
+}
+
+/**
+ * Atualiza o status do pedido (ex: 'paid', 'approved', 'expired').
+ */
+async function atualizarStatusPedido(transactionId, status) {
+  initOrdersStorage();
+  const tId = String(transactionId || '').trim();
+  const idx = ordersList.findIndex(o => o.transaction_id === tId || o.order_id === tId);
+  if (idx >= 0) {
+    ordersList[idx].status = status;
+    ordersList[idx].is_paid = (status === 'paid' || status === 'approved');
+    ordersList[idx].updated_at = new Date().toISOString();
+    persistOrdersToDisk();
+    return ordersList[idx];
+  }
+  return null;
+}
+
+/**
+ * Obtém pedido pelo transactionId ou orderId.
+ */
+async function obterPedido(id) {
+  initOrdersStorage();
+  const query = String(id || '').trim();
+  return ordersList.find(o => o.transaction_id === query || o.order_id === query) || null;
+}
+
+/**
+ * Lista pedidos registrados com dados sanitizados (para diagnóstico).
+ */
+async function listarPedidos() {
+  initOrdersStorage();
+  return ordersList;
+}
+
 module.exports = {
   registrarSessaoFinalizada,
   verificarSessaoFinalizada,
   listarSessoesFinalizadas,
-  removerSessao
+  removerSessao,
+  salvarPedidoComAtribuicao,
+  atualizarStatusPedido,
+  obterPedido,
+  listarPedidos
 };

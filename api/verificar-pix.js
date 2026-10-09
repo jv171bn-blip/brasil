@@ -1,6 +1,7 @@
 // api/verificar-pix.js
 // Vercel Serverless Function & Node.js HTTP compatible handler
 const https = require('https');
+const { atualizarStatusPedido, obterPedido } = require('./lib/db.js');
 
 module.exports = async function handler(req, res) {
   const sendJson = (status, data) => {
@@ -65,9 +66,19 @@ module.exports = async function handler(req, res) {
           const currentStatus = String(parsed.status || '').toLowerCase();
           const isPaid = currentStatus === 'approved' || currentStatus === 'paid';
 
+          let pedido = null;
+          try {
+            if (isPaid) {
+              pedido = await atualizarStatusPedido(transactionId, 'paid');
+            } else {
+              pedido = await obterPedido(transactionId);
+            }
+          } catch (eDb) {}
+
           sendJson(apiRes.statusCode || 200, {
             success: true,
             id: parsed.id || transactionId,
+            order_id: pedido ? pedido.order_id : null,
             status: currentStatus,
             paid: isPaid,
             amount: parsed.amount

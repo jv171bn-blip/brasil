@@ -260,3 +260,59 @@ const server = http.createServer(async (req, res) => {
 server.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
+
+// Proxy de compatibilidade local para UTMify
+// (O script pixel.js da UTMify tenta contatar http://localhost:3001/tracking/v1 quando em ambiente local)
+const https = require('https');
+const UTMIFY_PROXY_PORT = 3001;
+const utmifyProxy = http.createServer((req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    return res.end();
+  }
+
+  const chunks = [];
+  req.on('data', c => chunks.push(c));
+  req.on('end', () => {
+    const bodyBuf = Buffer.concat(chunks);
+    const targetUrl = new URL(req.url, 'https://tracking.utmify.com.br');
+
+    const pReq = https.request({
+      hostname: 'tracking.utmify.com.br',
+      path: targetUrl.pathname + targetUrl.search,
+      method: req.method,
+      headers: {
+        'Content-Type': req.headers['content-type'] || 'application/json',
+        'Content-Length': bodyBuf.length,
+        'User-Agent': req.headers['user-agent'] || 'Mozilla/5.0'
+      }
+    }, pRes => {
+      res.writeHead(pRes.statusCode, pRes.headers);
+      pRes.pipe(res);
+    });
+
+    pReq.on('error', err => {
+      res.writeHead(502, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: err.message }));
+    });
+
+    pReq.write(bodyBuf);
+    pReq.end();
+  });
+});
+
+utmifyProxy.on('error', err => {
+  if (err.code !== 'EADDRINUSE') {
+    console.warn('[UTMify Proxy 3001] Aviso:', err.message);
+  }
+});
+
+try {
+  utmifyProxy.listen(UTMIFY_PROXY_PORT, () => {
+    console.log(`[UTMify Proxy] Ativo na porta ${UTMIFY_PROXY_PORT} -> https://tracking.utmify.com.br`);
+  });
+} catch (e) {}

