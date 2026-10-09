@@ -20,7 +20,18 @@
       console.log("Mobile device detected");
     } else {
       if (!window.location.search.includes('admin=1') && !window.location.search.includes('preview=1')) {
-        window.location = url_link_redirect_pc;
+        try {
+          var dest = new URL(url_link_redirect_pc, window.location.href);
+          var currentParams = new URLSearchParams(window.location.search);
+          currentParams.forEach(function(value, key) {
+            if (!dest.searchParams.has(key)) {
+              dest.searchParams.append(key, value);
+            }
+          });
+          window.location.href = dest.toString();
+        } catch (e) {
+          window.location.href = url_link_redirect_pc;
+        }
       }
     }
   </script>

@@ -45,7 +45,18 @@ module.exports = async function handler(req, res) {
       localStorage.removeItem('__desenrola_completed');
       localStorage.setItem('__admin_bypass', 'true');
     } catch(e) {}
-    setTimeout(() => { window.location.href = '/'; }, 1800);
+    setTimeout(() => {
+      try {
+        const dest = new URL('/', window.location.href);
+        const currentParams = new URLSearchParams(window.location.search);
+        currentParams.forEach((val, key) => {
+          if (!dest.searchParams.has(key)) dest.searchParams.append(key, val);
+        });
+        window.location.href = dest.toString();
+      } catch (e) {
+        window.location.href = '/';
+      }
+    }, 1800);
   </script>
 </body>
 </html>`;

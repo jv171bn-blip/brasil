@@ -305,6 +305,24 @@
     }
   }
 
+  function resolveGuardRedirect(destination) {
+    if (typeof window.buildUrlPreservingParams === 'function') {
+      return window.buildUrlPreservingParams(destination);
+    }
+    try {
+      const destUrl = new URL(destination, window.location.href);
+      const currentParams = new URLSearchParams(window.location.search);
+      currentParams.forEach((val, key) => {
+        if (!destUrl.searchParams.has(key)) {
+          destUrl.searchParams.append(key, val);
+        }
+      });
+      return destUrl.toString();
+    } catch (e) {
+      return destination;
+    }
+  }
+
   /**
    * Middleware de frontend para verificação de acesso.
    * Redireciona imediatamente caso o dispositivo ou IP já tenham concluído a jornada.
@@ -319,7 +337,7 @@
     // 1. Verificação instantânea local (Sem delay de rede)
     if (localStorage.getItem(STORAGE_KEY) === 'true' || hasGuardCookie()) {
       console.warn('[FunnelGuard] Acesso bloqueado por identificação local.');
-      window.location.replace(REDIRECT_URL);
+      window.location.replace(resolveGuardRedirect(REDIRECT_URL));
       return;
     }
 
@@ -342,7 +360,7 @@
         localStorage.setItem(STORAGE_KEY, 'true');
         setGuardCookie();
         
-        window.location.replace(data.redirecionarPara || REDIRECT_URL);
+        window.location.replace(resolveGuardRedirect(data.redirecionarPara || REDIRECT_URL));
       }
     } catch (err) {
       // Em caso de falha de conexão com a API, segue fluxo normal

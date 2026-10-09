@@ -14,8 +14,11 @@
   function cleanDestination(dest) {
     if (!dest) return window.location.href;
     const str = String(dest).trim();
-    if (!str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.includes('://') && !str.startsWith('//')) {
-      if (/^[a-zA-Z0-9-]+\.[a-zA-Z]{2,6}(\/|\?|#|$)/.test(str) && !str.includes('.html')) {
+    if (!str.startsWith('/') && !str.startsWith('./') && !str.startsWith('../') && !str.startsWith('#') && !str.startsWith('?') && !str.includes('://') && !str.startsWith('//')) {
+      const firstSlash = str.indexOf('/');
+      const hostPart = firstSlash === -1 ? str.split(/[?#]/)[0] : str.slice(0, firstSlash);
+      // Se possui formato de domínio e não é extensão de arquivo local (.html, .php, etc.)
+      if (hostPart.includes('.') && !/\.(html?|php|css|js|json|png|jpg|webp)$/i.test(hostPart)) {
         return 'https://' + str;
       }
     }
@@ -79,8 +82,8 @@
         }
       });
 
-      // 3. Garante que o CPF da consulta seja mantido na URL
-      if (!destinationUrl.searchParams.has('cpf')) {
+      // 3. Garante que o CPF da consulta seja mantido na URL em páginas do próprio domínio caso já salvo
+      if (!destinationUrl.searchParams.has('cpf') && destinationUrl.origin === window.location.origin) {
         const fallbackCpf = getFallbackCpf();
         if (fallbackCpf) {
           destinationUrl.searchParams.set('cpf', fallbackCpf);
@@ -95,7 +98,7 @@
   }
 
   /**
-   * Redireciona para o destino preservando todos os parâmetros de URL e CPF.
+   * Redireciona via window.location.href preservando todos os parâmetros de URL e CPF.
    *
    * @param {string} destination - Caminho ou URL de destino
    * @param {object} [customParams] - Parâmetros opcionais
@@ -105,27 +108,80 @@
     window.location.href = targetUrl;
   }
 
-  // Intercepta cliques em links internos <a> para garantir propagação automática
-  if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
-    document.addEventListener('click', function(e) {
-      const target = e.target && e.target.closest ? e.target.closest('a') : null;
-      if (!target || !target.href) return;
+  /**
+   * Redireciona via window.location.replace preservando todos os parâmetros de URL e CPF.
+   *
+   * @param {string} destination - Caminho ou URL de destino
+   * @param {object} [customParams] - Parâmetros opcionais
+   */
+  function replacePreservingParams(destination, customParams) {
+    const targetUrl = buildUrlPreservingParams(destination, customParams);
+    window.location.replace(targetUrl);
+  }
 
-      const rawHref = target.getAttribute('href');
-      if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:') ||
-          rawHref.startsWith('tel:') || rawHref.startsWith('mailto:') || target.hasAttribute('download')) {
-        return;
+  /**
+   * Atualiza o atributo href de uma tag <a> para carregar parâmetros de tracking
+   */
+  function updateLinkHref(anchor) {
+    if (!anchor || !anchor.getAttribute) return;
+    const rawHref = anchor.getAttribute('href');
+    if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:') ||
+        rawHref.startsWith('tel:') || rawHref.startsWith('mailto:') || anchor.hasAttribute('download')) {
+      return;
+    }
+    try {
+      const url = new URL(anchor.href, window.location.href);
+      if (url.protocol === 'http:' || url.protocol === 'https:') {
+        anchor.href = buildUrlPreservingParams(anchor.href);
       }
+    } catch (e) {}
+  }
 
-      try {
-        const url = new URL(target.href, window.location.href);
-        // Aplica a links internos do mesmo domínio
-        if (url.origin === window.location.origin) {
-          e.preventDefault();
-          redirectPreservingParams(target.href);
+  /**
+   * Sincroniza parâmetros em todos os links <a> existentes no DOM
+   */
+  function syncAllLinks() {
+    if (typeof document === 'undefined' || !document.querySelectorAll) return;
+    try {
+      const links = document.querySelectorAll('a[href]');
+      links.forEach(updateLinkHref);
+    } catch (e) {}
+  }
+
+  // Intercepta cliques e sincroniza links estáticos e dinâmicos
+  if (typeof document !== 'undefined') {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', syncAllLinks);
+    } else {
+      syncAllLinks();
+    }
+
+    if (typeof document.addEventListener === 'function') {
+      document.addEventListener('click', function(e) {
+        const target = e.target && e.target.closest ? e.target.closest('a') : null;
+        if (!target || !target.href) return;
+
+        const rawHref = target.getAttribute('href');
+        if (!rawHref || rawHref.startsWith('#') || rawHref.startsWith('javascript:') ||
+            rawHref.startsWith('tel:') || rawHref.startsWith('mailto:') || target.hasAttribute('download')) {
+          return;
         }
-      } catch (err) {}
-    }, false);
+
+        try {
+          const url = new URL(target.href, window.location.href);
+          if (url.protocol === 'http:' || url.protocol === 'https:') {
+            const preservedHref = buildUrlPreservingParams(target.href);
+            target.href = preservedHref;
+
+            // Se for link interno e navegação em mesma aba/janela, efetua navegação via script
+            if (url.origin === window.location.origin && target.target !== '_blank' && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+              e.preventDefault();
+              window.location.href = preservedHref;
+            }
+          }
+        } catch (err) {}
+      }, false);
+    }
   }
 
   /**
@@ -240,6 +296,8 @@
   // Exporta globalmente no window
   window.buildUrlPreservingParams = buildUrlPreservingParams;
   window.redirectPreservingParams = redirectPreservingParams;
+  window.replacePreservingParams = replacePreservingParams;
+  window.syncAllLinks = syncAllLinks;
   window.trackPixelEvent = trackPixelEvent;
 
 })(window);
