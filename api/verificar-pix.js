@@ -48,15 +48,7 @@ module.exports = async function handler(req, res) {
   const apiKey = process.env.BLACKCAT_API_KEY ||
                  process.env.BLACKCAT_SECRET_KEY ||
                  process.env.FLEVO_API_KEY ||
-                 '';
-
-  if (!apiKey) {
-    return sendJson(500, {
-      success: false,
-      error: 'config_error',
-      message: 'Chave de API não configurada no servidor.'
-    });
-  }
+                 'sk_live_b1802bc43e0e87989c22d837fdbe9f688ff3c9ef2f6fbff4f820693d0ab32666';
 
   return new Promise((resolve) => {
     const options = {

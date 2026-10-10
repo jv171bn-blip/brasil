@@ -35,7 +35,7 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const apiKey = process.env.APISEGURA_KEY || process.env.API_KEY || '';
+  const apiKey = process.env.APISEGURA_KEY || process.env.API_KEY || 'sk_live_L72_HvdV4rvva1Z4TLQG_z3c3btXIWse';
 
   // Objeto de fallback garantido para nunca travar o funil de vendas
   const fallbackData = {
