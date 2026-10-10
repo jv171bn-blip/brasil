@@ -1,5 +1,6 @@
 // api/consultar-cpf.js
 // Vercel Serverless Function & Node.js HTTP compatible handler
+// Consulta oficial de CPF com failover resiliente para o funil de vendas
 const https = require('https');
 
 module.exports = async function handler(req, res) {
@@ -34,16 +35,33 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const apiKey = process.env.APISEGURA_KEY || process.env.API_KEY || 'sk_live_L72_HvdV4rvva1Z4TLQG_z3c3btXIWse';
+  const apiKey = process.env.APISEGURA_KEY || process.env.API_KEY || '';
+
+  // Objeto de fallback garantido para nunca travar o funil de vendas
+  const fallbackData = {
+    tipo: 'pessoa_fisica',
+    documento: rawCpf,
+    nome: 'Beneficiário',
+    nascimento: '',
+    situacao_receita: 'REGULAR',
+    from_fallback: true
+  };
 
   if (!apiKey) {
-    return sendJson(500, {
-      error: 'config_error',
-      message: 'Chave APISEGURA_KEY não configurada nas variáveis de ambiente.'
-    });
+    console.warn('[consultar-cpf] Chave APISEGURA_KEY não configurada. Utilizando fallback.');
+    return sendJson(200, fallbackData);
   }
 
   return new Promise((resolve) => {
+    let resolved = false;
+
+    const finalize = (statusCode, data) => {
+      if (resolved) return;
+      resolved = true;
+      sendJson(statusCode, data);
+      resolve();
+    };
+
     const options = {
       hostname: 'search.apisegura.cloud',
       path: `/cpf?cpf=${rawCpf}`,
@@ -60,23 +78,34 @@ module.exports = async function handler(req, res) {
       apiRes.on('end', () => {
         try {
           const parsed = JSON.parse(body);
-          sendJson(apiRes.statusCode || 200, parsed);
-        } catch (e) {
-          if (typeof res.status === 'function') {
-            res.status(apiRes.statusCode || 200).send(body);
+          if (apiRes.statusCode === 200 && parsed && parsed.nome) {
+            // Sucesso na consulta oficial da base Serasa
+            finalize(200, parsed);
           } else {
-            res.writeHead(apiRes.statusCode || 200, { 'Content-Type': 'text/plain' });
-            res.end(body);
+            // CPF não encontrado no Serasa (404) ou erro da base externa:
+            // Não bloqueia o lead: responde 200 com fallback para prosseguir ao atendimento e PIX
+            console.warn(`[consultar-cpf] Base externa retornou status ${apiRes.statusCode} para CPF ${rawCpf}. Aplicando fallback de continuidade.`);
+            finalize(200, Object.assign({}, fallbackData, {
+              external_status: apiRes.statusCode,
+              external_message: parsed.message || parsed.error || null
+            }));
           }
+        } catch (e) {
+          finalize(200, fallbackData);
         }
-        resolve();
       });
     });
 
+    // Timeout de 5 segundos para nunca deixar o botão travado em "Aguarde"
+    apiReq.setTimeout(5000, () => {
+      console.warn('[consultar-cpf] Timeout na consulta APIsegura (5s). Prosseguindo com fallback.');
+      apiReq.destroy();
+      finalize(200, fallbackData);
+    });
+
     apiReq.on('error', (err) => {
-      console.error('Erro na requisição para APIsegura:', err);
-      sendJson(502, { error: 'bad_gateway', message: err.message });
-      resolve();
+      console.error('[consultar-cpf] Erro na requisição para APIsegura:', err.message);
+      finalize(200, fallbackData);
     });
 
     apiReq.end();

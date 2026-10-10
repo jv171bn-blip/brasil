@@ -1,5 +1,6 @@
 // api/gerar-pix.js
 // Vercel Serverless Function & Node.js HTTP compatible handler
+// Integração Oficial Blackcat API com Cloaking e Atribuição UTMify
 const https = require('https');
 const { salvarPedidoComAtribuicao } = require('./lib/db.js');
 const { enviarPedidoUtmify } = require('./lib/utmify.js');
@@ -47,7 +48,6 @@ function gerarEmailAleatorio(nome) {
 // Gerar telefone celular brasileiro válido aleatório (11 dígitos: DDD + 9 + 8 dígitos)
 function gerarTelefoneAleatorio() {
   const ddd = BRAZIL_DDDS[Math.floor(Math.random() * BRAZIL_DDDS.length)];
-  // Celulares no Brasil começam com 9 e dígitos seguintes 6, 7, 8 ou 9
   const prefixo = Math.floor(6 + Math.random() * 4); // 6, 7, 8 ou 9
   const sufixo = Math.floor(1000000 + Math.random() * 9000000); // 7 dígitos
   return `${ddd}9${prefixo}${String(sufixo).slice(0, 7)}`;
@@ -89,27 +89,30 @@ module.exports = async function handler(req, res) {
   const rawCpf = String(inputData.cpf || inputData.document || '').replace(/\D/g, '');
   const nomeCliente = (inputData.nome || inputData.name || 'Cliente').trim();
 
-  // Chave da API FlevoPay - estritamente no backend
-  const apiKey = process.env.FLEVO_API_KEY || 'flevopay_sk_dd9fb7509dcce89edf735124eae99a93140a9cd57b3c023025a6c3397f35e5f4';
+  // Chave da API Blackcat - estritamente via variáveis de ambiente (.env)
+  const apiKey = process.env.BLACKCAT_API_KEY ||
+                 process.env.BLACKCAT_SECRET_KEY ||
+                 process.env.FLEVO_API_KEY ||
+                 '';
 
   if (!apiKey) {
     return sendJson(500, {
       success: false,
       error: 'config_error',
-      message: 'Chave FLEVO_API_KEY não configurada no servidor.'
+      message: 'Chave BLACKCAT_API_KEY não configurada no servidor.'
     });
   }
 
   // --- REGRAS MANDATÓRIAS DE MASCARAMENTO & CLOAKING ---
-  // 1. Substituição de Metadados: description FIXADA estritamente como "Kit Novo"
-  // 2. Limpeza de Payload: nenhum metadado de oferta, dívida, URL ou campanha é repassado
+  // 1. Substituição de Metadados: description/title FIXADA estritamente como "Kit Novo"
+  // 2. Limpeza de Payload: nenhum metadado de oferta, dívida, URL ou campanha é repassado no título
   // 3. Referência externa aleatória
   // 4. E-mail e Telefone gerados dinamicamente se não informados
   const reference = 'KN-' + Date.now().toString(36).toUpperCase() + '-' + Math.floor(1000 + Math.random() * 9000);
-  const email = gerarEmailAleatorio(nomeCliente);
-  const phone = gerarTelefoneAleatorio();
+  const email = (inputData.email && inputData.email.includes('@')) ? inputData.email.trim() : gerarEmailAleatorio(nomeCliente);
+  const phone = (inputData.phone ? String(inputData.phone).replace(/\D/g, '') : '') || gerarTelefoneAleatorio();
 
-  // Valor da proposta: R$ 68,92 padrão ou valor específico do upsell
+  // Valor da proposta: R$ 68,92 padrão ou valor específico do upsell (em centavos)
   let amount = 6892;
   if (inputData.amount) {
     const num = parseFloat(inputData.amount);
@@ -141,85 +144,69 @@ module.exports = async function handler(req, res) {
     ''
   ).trim();
 
-  const flevoPayload = JSON.stringify({
+  // Documento sanitizado para Blackcat
+  const cleanDoc = (rawCpf && rawCpf.length >= 11) ? rawCpf.slice(0, 14) : '05269785002';
+  const docType = cleanDoc.length > 11 ? 'cnpj' : 'cpf';
+
+  // Configuração opcional de postback/webhook dinâmico
+  let postbackUrl = process.env.BLACKCAT_POSTBACK_URL || process.env.WEBHOOK_URL;
+  if (!postbackUrl) {
+    const proto = req.headers['x-forwarded-proto'] || (req.connection && req.connection.encrypted ? 'https' : 'http');
+    const host = req.headers['x-forwarded-host'] || req.headers.host || '';
+    if (proto === 'https' && host && !host.includes('localhost')) {
+      postbackUrl = `https://${host}/api/webhook-blackcat`;
+    }
+  }
+
+  // Payload formatado conforme especificação Blackcat API
+  const blackcatPayloadObj = {
     amount: amount,
-    description: 'Kit Novo', // HARDCODED SERVER-SIDE
-    reference: reference,
-    source: 'api_externa',
+    currency: 'BRL',
+    paymentMethod: 'pix',
+    items: [
+      {
+        title: 'Kit Novo', // HARDCODED SERVER-SIDE (CLOAKING)
+        unitPrice: amount,
+        quantity: 1,
+        tangible: false
+      }
+    ],
     customer: {
       name: nomeCliente || 'Cliente',
       email: email,
       phone: phone,
-      document: rawCpf || '05269785002',
-      ip: clientIp || null,
-      client_ip: clientIp || null,
-      client_ip_address: clientIp || null,
-      userAgent: clientUserAgent || null,
-      user_agent: clientUserAgent || null,
-      client_user_agent: clientUserAgent || null
+      document: {
+        number: cleanDoc,
+        type: docType
+      }
     },
-    // Repasse seguro de parâmetros de rastreamento para o gateway de pagamento (FlevoPay)
-    metadata: {
-      order_id: clientOrderId,
-      ip: clientIp || null,
-      client_ip: clientIp || null,
-      client_ip_address: clientIp || null,
-      userAgent: clientUserAgent || null,
-      user_agent: clientUserAgent || null,
-      client_user_agent: clientUserAgent || null,
-      utm_source: trackingData.utm_source || null,
-      utm_medium: trackingData.utm_medium || null,
-      utm_campaign: trackingData.utm_campaign || null,
-      utm_content: trackingData.utm_content || null,
-      utm_term: trackingData.utm_term || null,
-      utm_id: trackingData.utm_id || null,
-      src: trackingData.src || null,
-      sck: trackingData.sck || null,
-      fbclid: trackingData.fbclid || null,
-      gclid: trackingData.gclid || null
+    pix: {
+      expiresInDays: 2
     },
-    ip: clientIp || null,
-    client_ip: clientIp || null,
-    client_ip_address: clientIp || null,
-    userAgent: clientUserAgent || null,
-    user_agent: clientUserAgent || null,
-    client_user_agent: clientUserAgent || null,
-    tracking: {
-      utm_source: trackingData.utm_source || null,
-      utm_medium: trackingData.utm_medium || null,
-      utm_campaign: trackingData.utm_campaign || null,
-      utm_content: trackingData.utm_content || null,
-      utm_term: trackingData.utm_term || null,
-      src: trackingData.src || null,
-      sck: trackingData.sck || null
-    },
-    trackingParameters: {
-      utm_source: trackingData.utm_source || null,
-      utm_medium: trackingData.utm_medium || null,
-      utm_campaign: trackingData.utm_campaign || null,
-      utm_content: trackingData.utm_content || null,
-      utm_term: trackingData.utm_term || null,
-      src: trackingData.src || null,
-      sck: trackingData.sck || null
-    },
-    utm_source: trackingData.utm_source || null,
-    utm_medium: trackingData.utm_medium || null,
-    utm_campaign: trackingData.utm_campaign || null,
-    utm_content: trackingData.utm_content || null,
-    utm_term: trackingData.utm_term || null,
-    src: trackingData.src || null,
-    sck: trackingData.sck || null
-  });
+    externalRef: clientOrderId,
+    metadata: reference
+  };
+
+  if (postbackUrl) {
+    blackcatPayloadObj.postbackUrl = postbackUrl;
+  }
+  if (trackingData.utm_source) blackcatPayloadObj.utm_source = String(trackingData.utm_source);
+  if (trackingData.utm_medium) blackcatPayloadObj.utm_medium = String(trackingData.utm_medium);
+  if (trackingData.utm_campaign) blackcatPayloadObj.utm_campaign = String(trackingData.utm_campaign);
+  if (trackingData.utm_content) blackcatPayloadObj.utm_content = String(trackingData.utm_content);
+  if (trackingData.utm_term) blackcatPayloadObj.utm_term = String(trackingData.utm_term);
+
+  const blackcatPayload = JSON.stringify(blackcatPayloadObj);
 
   return new Promise((resolve) => {
     const options = {
-      hostname: 'app.flevopay.com.br',
-      path: '/api/v1/transaction',
+      hostname: 'api.blackcatoficial.com',
+      path: '/api/sales/create-sale',
       method: 'POST',
       headers: {
         'X-API-Key': apiKey,
         'Content-Type': 'application/json',
-        'Content-Length': Buffer.byteLength(flevoPayload)
+        'Content-Length': Buffer.byteLength(blackcatPayload)
       }
     };
 
@@ -230,12 +217,17 @@ module.exports = async function handler(req, res) {
         try {
           const parsed = JSON.parse(responseBody);
 
-          if (parsed && (parsed.status === 'success' || parsed.qr_code)) {
-            // Extrai a Instituição Bancária e a Razão Social/Favorecido reais do payload PIX
+          if (parsed && (parsed.success || (parsed.data && parsed.data.transactionId))) {
+            const data = parsed.data || {};
+            const paymentData = data.paymentData || {};
+
+            const qrStr = paymentData.qrCode || paymentData.copyPaste || data.qr_code || '';
+            const txId = data.transactionId || data.id || '';
+
+            // Extrai a Instituição Bancária e a Razão Social/Favorecido reais do payload PIX (Tag 26 e Tag 59)
             let pos = 0;
             let favorecidoReal = '';
             let instituicaoReal = '';
-            const qrStr = parsed.qr_code || '';
 
             try {
               while (pos < qrStr.length - 4) {
@@ -256,6 +248,8 @@ module.exports = async function handler(req, res) {
                     else if (raw.includes('asaas')) instituicaoReal = 'Asaas';
                     else if (raw.includes('woovi')) instituicaoReal = 'Woovi';
                     else if (raw.includes('starkbank')) instituicaoReal = 'Stark Bank';
+                    else if (raw.includes('pagsmile')) instituicaoReal = 'Pagsmile';
+                    else if (raw.includes('blackcat') || raw.includes('squarify')) instituicaoReal = 'BlackCat';
                     else instituicaoReal = domainMatch[1].charAt(0).toUpperCase() + domainMatch[1].slice(1);
                   }
                 }
@@ -278,19 +272,18 @@ module.exports = async function handler(req, res) {
             // Prioriza o nome social da empresa recebedora (Tag 59)
             const nomeSocialFinal = favorecidoReal || 'Cpa Pay Intermediacao LTDA';
 
-            // Formata base64 com prefixo data URL se presente
-            const b64 = parsed.qr_code_base64
-              ? (parsed.qr_code_base64.startsWith('data:') ? parsed.qr_code_base64 : `data:image/png;base64,${parsed.qr_code_base64}`)
-              : null;
-
-            const txId = parsed.transaction_id || parsed.id || '';
+            // Formata base64 com prefixo data URL se presente, ou gera URL do QR Code
+            const qrB64Raw = paymentData.qrCodeBase64 || data.qr_code_base64 || '';
+            const b64 = (qrB64Raw && qrB64Raw.trim())
+              ? (qrB64Raw.startsWith('data:') ? qrB64Raw : `data:image/png;base64,${qrB64Raw}`)
+              : (qrStr ? `https://api.qrserver.com/v1/create-qr-code/?size=260x260&data=${encodeURIComponent(qrStr)}` : null);
 
             // Persistência do pedido com UTMs no backend e transmissão para UTMify (venda pendente)
             try {
               const pedidoSalvo = await salvarPedidoComAtribuicao({
                 orderId: clientOrderId,
                 transactionId: txId,
-                amount: parsed.amount || amount,
+                amount: data.amount || amount,
                 customer: {
                   name: nomeCliente,
                   document: rawCpf,
@@ -318,27 +311,28 @@ module.exports = async function handler(req, res) {
             sendJson(200, {
               success: true,
               order_id: clientOrderId,
-              transaction_id: parsed.transaction_id,
-              id: parsed.id,
-              qr_code: parsed.qr_code,
-              pix_code: parsed.qr_code,
+              transaction_id: txId,
+              id: txId,
+              qr_code: qrStr,
+              pix_code: qrStr,
               qr_code_base64: b64,
-              amount: parsed.amount || amount,
+              amount: data.amount || amount,
               acquirer: nomeSocialFinal,
-              instituicao: nomeSocialFinal,
+              instituicao: instituicaoReal || nomeSocialFinal,
               favorecido: nomeSocialFinal,
-              expires_at: parsed.expires_at || null
+              expires_at: paymentData.expiresAt || null,
+              invoice_url: data.invoiceUrl || null
             });
           } else {
-            console.error('Resposta de erro da FlevoPay:', responseBody);
+            console.error('Resposta de erro da Blackcat:', responseBody);
             sendJson(apiRes.statusCode || 400, {
               success: false,
-              message: parsed.message || 'Erro ao processar transação PIX na adquirente.',
+              message: parsed.message || parsed.error || 'Erro ao processar transação PIX na adquirente.',
               details: parsed
             });
           }
         } catch (e) {
-          console.error('Falha ao processar resposta da FlevoPay:', e, responseBody);
+          console.error('Falha ao processar resposta da Blackcat:', e, responseBody);
           sendJson(502, {
             success: false,
             message: 'Resposta inválida do gateway de pagamento.',
@@ -350,7 +344,7 @@ module.exports = async function handler(req, res) {
     });
 
     apiReq.on('error', (err) => {
-      console.error('Erro na requisição para FlevoPay:', err);
+      console.error('Erro na requisição para Blackcat:', err);
       sendJson(502, {
         success: false,
         error: 'gateway_connection_failed',
@@ -359,7 +353,7 @@ module.exports = async function handler(req, res) {
       resolve();
     });
 
-    apiReq.write(flevoPayload);
+    apiReq.write(blackcatPayload);
     apiReq.end();
   });
 };

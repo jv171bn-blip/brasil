@@ -21,18 +21,21 @@ const MIME_TYPES = {
   '.ogg': 'audio/ogg'
 };
 
-// Carregar variáveis do .env se existir
-try {
-  if (fs.existsSync(path.join(__dirname, '.env'))) {
-    const envLines = fs.readFileSync(path.join(__dirname, '.env'), 'utf8').split('\n');
-    envLines.forEach(line => {
-      const parts = line.trim().split('=');
-      if (parts[0] && parts[1] && !process.env[parts[0].trim()]) {
-        process.env[parts[0].trim()] = parts.slice(1).join('=').trim();
-      }
-    });
-  }
-} catch (e) {}
+// Carregar variáveis do .env e .env.local se existirem
+['.env', '.env.local'].forEach(envFile => {
+  try {
+    const fullPath = path.join(__dirname, envFile);
+    if (fs.existsSync(fullPath)) {
+      const envLines = fs.readFileSync(fullPath, 'utf8').split('\n');
+      envLines.forEach(line => {
+        const parts = line.trim().split('=');
+        if (parts[0] && parts[1] && !process.env[parts[0].trim()]) {
+          process.env[parts[0].trim()] = parts.slice(1).join('=').trim();
+        }
+      });
+    }
+  } catch (e) {}
+});
 
 const server = http.createServer(async (req, res) => {
   const urlObj = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
@@ -107,15 +110,15 @@ const server = http.createServer(async (req, res) => {
 
 
 
-  // Rotas de Webhook de Pagamento (FlevoPay / Gateway PIX -> UTMify)
-  if (pathname === '/webhook' || pathname === '/webhook-flevo' || pathname === '/webhook-pagamento') {
+  // Rotas de Webhook de Pagamento (Blackcat / Gateway PIX -> UTMify)
+  if (pathname === '/webhook' || pathname === '/webhook-blackcat' || pathname === '/webhook-flevo' || pathname === '/webhook-pagamento') {
     let rawBody = '';
     req.on('data', chunk => { rawBody += chunk; });
     req.on('end', () => {
       try { req.body = rawBody ? JSON.parse(rawBody) : {}; } catch(e) { req.body = {}; }
       req.query = Object.fromEntries(urlObj.searchParams);
-      delete require.cache[require.resolve('./api/webhook-flevo.js')];
-      const handler = require('./api/webhook-flevo.js');
+      delete require.cache[require.resolve('./api/webhook-blackcat.js')];
+      const handler = require('./api/webhook-blackcat.js');
       return handler(req, res);
     });
     return;
@@ -173,13 +176,26 @@ const server = http.createServer(async (req, res) => {
       req.query = Object.fromEntries(urlObj.searchParams);
 
       if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
-        let rawBody = '';
-        req.on('data', chunk => { rawBody += chunk; });
+        const chunks = [];
+        req.on('data', chunk => { chunks.push(chunk); });
         req.on('end', () => {
-          try {
-            req.body = rawBody ? JSON.parse(rawBody) : {};
-          } catch(e) {
-            req.body = rawBody;
+          const rawBuffer = Buffer.concat(chunks);
+          req.rawBuffer = rawBuffer;
+          const contentType = (req.headers['content-type'] || '').toLowerCase();
+          if (contentType.includes('application/json')) {
+            try {
+              req.body = JSON.parse(rawBuffer.toString('utf8'));
+            } catch(e) {
+              req.body = {};
+            }
+          } else if (contentType.includes('multipart/form-data')) {
+            req.body = rawBuffer;
+          } else {
+            try {
+              req.body = JSON.parse(rawBuffer.toString('utf8'));
+            } catch(e) {
+              req.body = rawBuffer.toString('utf8');
+            }
           }
           executeHandler();
         });

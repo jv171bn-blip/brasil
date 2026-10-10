@@ -1,5 +1,6 @@
 // api/verificar-pix.js
 // Vercel Serverless Function & Node.js HTTP compatible handler
+// Consulta de status oficial via Blackcat API
 const https = require('https');
 const { atualizarStatusPedido, obterPedido } = require('./lib/db.js');
 
@@ -44,12 +45,23 @@ module.exports = async function handler(req, res) {
     });
   }
 
-  const apiKey = process.env.FLEVO_API_KEY || 'flevopay_sk_dd9fb7509dcce89edf735124eae99a93140a9cd57b3c023025a6c3397f35e5f4';
+  const apiKey = process.env.BLACKCAT_API_KEY ||
+                 process.env.BLACKCAT_SECRET_KEY ||
+                 process.env.FLEVO_API_KEY ||
+                 '';
+
+  if (!apiKey) {
+    return sendJson(500, {
+      success: false,
+      error: 'config_error',
+      message: 'Chave de API não configurada no servidor.'
+    });
+  }
 
   return new Promise((resolve) => {
     const options = {
-      hostname: 'app.flevopay.com.br',
-      path: `/api/v1/query?action=get_transaction&id=${encodeURIComponent(transactionId)}`,
+      hostname: 'api.blackcatoficial.com',
+      path: `/api/sales/${encodeURIComponent(transactionId)}/status`,
       method: 'GET',
       headers: {
         'X-API-Key': apiKey,
@@ -60,11 +72,12 @@ module.exports = async function handler(req, res) {
     const apiReq = https.request(options, (apiRes) => {
       let responseBody = '';
       apiRes.on('data', chunk => { responseBody += chunk; });
-      apiRes.on('end', () => {
+      apiRes.on('end', async () => {
         try {
           const parsed = JSON.parse(responseBody);
-          const currentStatus = String(parsed.status || '').toLowerCase();
-          const isPaid = currentStatus === 'approved' || currentStatus === 'paid';
+          const data = parsed.data || {};
+          const statusRaw = String(data.status || parsed.status || '').toLowerCase();
+          const isPaid = statusRaw === 'approved' || statusRaw === 'paid';
 
           let pedido = null;
           try {
@@ -93,11 +106,12 @@ module.exports = async function handler(req, res) {
 
           sendJson(apiRes.statusCode || 200, {
             success: true,
-            id: parsed.id || transactionId,
+            id: data.transactionId || parsed.id || transactionId,
+            transaction_id: data.transactionId || parsed.id || transactionId,
             order_id: pedido ? pedido.order_id : null,
-            status: currentStatus,
+            status: statusRaw,
             paid: isPaid,
-            amount: parsed.amount
+            amount: data.amount || parsed.amount
           });
         } catch (e) {
           sendJson(502, {
@@ -111,7 +125,7 @@ module.exports = async function handler(req, res) {
     });
 
     apiReq.on('error', (err) => {
-      console.error('Erro ao consultar status na FlevoPay:', err);
+      console.error('Erro ao consultar status na Blackcat:', err);
       sendJson(502, {
         success: false,
         error: 'gateway_connection_failed',

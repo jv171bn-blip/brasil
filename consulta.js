@@ -100,22 +100,14 @@ async function submitCPF() {
     const response = await fetch('/api/consultar-cpf?cpf=' + raw);
     const data = await response.json();
 
-    if (!response.ok) {
-      btn.disabled = false;
-      if (btnText) btnText.textContent = 'Continuar';
-      cpfInput.classList.add('error');
-      if (cpfError) {
-        cpfError.textContent = data.message || data.error || 'CPF não encontrado no sistema. Verifique o número digitado.';
-        cpfError.style.display = 'block';
-      }
-      return;
-    }
+    // Se a API externa retornar dados, armazena; caso contrário, prossegue com dados padrão
+    const finalData = (response.ok && data) ? data : { documento: raw, nome: 'Beneficiário' };
 
     // Sucesso: armazena dados no storage seguro do navegador
     try {
       localStorage.setItem('desenrola_cpf', raw);
-      sessionStorage.setItem('desenrola_user', JSON.stringify(data));
-      localStorage.setItem('desenrola_user', JSON.stringify(data));
+      sessionStorage.setItem('desenrola_user', JSON.stringify(finalData));
+      localStorage.setItem('desenrola_user', JSON.stringify(finalData));
     } catch (e) {}
 
     // Preserva integralmente parâmetros de URL (UTMs, tracking) e mantém o CPF da consulta na URL
