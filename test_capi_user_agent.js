@@ -3,8 +3,8 @@
  * Teste de Validação Específico para Meta CAPI (client_user_agent + client_ip_address)
  */
 
-const { montarPayloadPedidoUtmify, enviarPedidoUtmify } = require('./api/lib/utmify.js');
-const { salvarPedidoComAtribuicao, obterPedido } = require('./api/lib/db.js');
+const { montarPayloadPedidoUtmify, enviarPedidoUtmify } = require('./lib/utmify.js');
+const { salvarPedidoComAtribuicao, obterPedido } = require('./lib/db.js');
 const http = require('http');
 
 async function testCapiParameters() {

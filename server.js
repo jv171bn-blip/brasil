@@ -1,8 +1,8 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { getClientIp } = require('./api/lib/ip.js');
-const { verificarSessaoFinalizada } = require('./api/lib/db.js');
+const { getClientIp } = require('./lib/ip.js');
+const { verificarSessaoFinalizada } = require('./lib/db.js');
 
 const PORT = 3000;
 const MIME_TYPES = {
@@ -63,9 +63,9 @@ const server = http.createServer(async (req, res) => {
 
   // Rota de Desbloqueio e Modo Desenvolvedor
   if (pathname === '/desbloquear' || pathname.startsWith('/desbloquear')) {
-    delete require.cache[require.resolve('./api/desbloquear.js')];
-    const handler = require('./api/desbloquear.js');
-    req.query = Object.fromEntries(urlObj.searchParams);
+    delete require.cache[require.resolve('./api/acesso.js')];
+    const handler = require('./api/acesso.js');
+    req.query = Object.assign(Object.fromEntries(urlObj.searchParams), { action: 'desbloquear' });
     req.body = {};
     return handler(req, res);
   }
@@ -117,8 +117,8 @@ const server = http.createServer(async (req, res) => {
     req.on('end', () => {
       try { req.body = rawBody ? JSON.parse(rawBody) : {}; } catch(e) { req.body = {}; }
       req.query = Object.fromEntries(urlObj.searchParams);
-      delete require.cache[require.resolve('./api/webhook-blackcat.js')];
-      const handler = require('./api/webhook-blackcat.js');
+      delete require.cache[require.resolve('./api/webhook.js')];
+      const handler = require('./api/webhook.js');
       return handler(req, res);
     });
     return;
@@ -128,11 +128,11 @@ const server = http.createServer(async (req, res) => {
   if (pathname.startsWith('/check-payment')) {
     const parts = pathname.replace('/check-payment', '').split('/').filter(Boolean);
     const idFromPath = parts[0] || '';
-    req.query = Object.fromEntries(urlObj.searchParams);
+    req.query = Object.assign(Object.fromEntries(urlObj.searchParams), { action: 'verificar' });
     if (idFromPath) req.query.id = idFromPath;
     req.body = {};
-    delete require.cache[require.resolve('./api/verificar-pix.js')];
-    const handler = require('./api/verificar-pix.js');
+    delete require.cache[require.resolve('./api/pix.js')];
+    const handler = require('./api/pix.js');
     return handler(req, res);
   }
 
@@ -147,10 +147,10 @@ const server = http.createServer(async (req, res) => {
     req.on('data', chunk => { rawBody += chunk; });
     req.on('end', () => {
       try { req.body = rawBody ? JSON.parse(rawBody) : {}; } catch(e) { req.body = {}; }
-      req.query = Object.fromEntries(urlObj.searchParams);
+      req.query = Object.assign(Object.fromEntries(urlObj.searchParams), { action: 'gerar' });
       if (!req.body.amount) req.body.amount = defaultAmount;
-      delete require.cache[require.resolve('./api/gerar-pix.js')];
-      const handler = require('./api/gerar-pix.js');
+      delete require.cache[require.resolve('./api/pix.js')];
+      const handler = require('./api/pix.js');
       return handler(req, res);
     });
     return;
@@ -159,7 +159,27 @@ const server = http.createServer(async (req, res) => {
   // Rotas automáticas para funções serverless em /api/
   if (pathname.startsWith('/api/')) {
     const apiName = pathname.replace('/api/', '').split('/')[0];
-    const apiFilePath = path.join(__dirname, 'api', `${apiName}.js`);
+    let apiFilePath = path.join(__dirname, 'api', `${apiName}.js`);
+    let injectedQuery = {};
+
+    // Mapeamento de compatibilidade para endpoints consolidados
+    if (!fs.existsSync(apiFilePath)) {
+      const aliasMap = {
+        'gerar-pix': { target: 'pix.js', query: { action: 'gerar' } },
+        'verificar-pix': { target: 'pix.js', query: { action: 'verificar' } },
+        'pedidos': { target: 'pix.js', query: { action: 'pedidos' } },
+        'webhook-blackcat': { target: 'webhook.js', query: { source: 'blackcat' } },
+        'webhook-flevo': { target: 'webhook.js', query: { source: 'flevo' } },
+        'verificar-acesso': { target: 'acesso.js', query: { action: 'verificar' } },
+        'finalizar-jornada': { target: 'acesso.js', query: { action: 'finalizar' } },
+        'desbloquear': { target: 'acesso.js', query: { action: 'desbloquear' } }
+      };
+      if (aliasMap[apiName]) {
+        apiFilePath = path.join(__dirname, 'api', aliasMap[apiName].target);
+        injectedQuery = aliasMap[apiName].query;
+      }
+    }
+
     if (fs.existsSync(apiFilePath)) {
       const executeHandler = () => {
         try {
@@ -173,7 +193,7 @@ const server = http.createServer(async (req, res) => {
         }
       };
 
-      req.query = Object.fromEntries(urlObj.searchParams);
+      req.query = Object.assign(Object.fromEntries(urlObj.searchParams), injectedQuery);
 
       if (req.method === 'POST' || req.method === 'PUT' || req.method === 'PATCH') {
         const chunks = [];

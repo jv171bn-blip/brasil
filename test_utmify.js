@@ -317,12 +317,12 @@ async function runTests() {
     const webhookOk = webhookRes.statusCode === 200 && webhookRes.json && webhookRes.json.status === 'paid';
 
     // 2. Consulta banco de dados para confirmar transição atômica
-    const db = require('./api/lib/db.js');
+    const db = require('./lib/db.js');
     const pedidoAposWebhook = await db.obterPedido(txIdToPay);
     const dbPaidOk = pedidoAposWebhook && pedidoAposWebhook.status === 'paid' && pedidoAposWebhook.is_paid === true;
 
     // 3. Validação do schema oficial do payload que vai para a UTMify
-    const utmifyLib = require('./api/lib/utmify.js');
+    const utmifyLib = require('./lib/utmify.js');
     const payloadMontado = utmifyLib.montarPayloadPedidoUtmify(pedidoAposWebhook, 'paid');
     const schemaOk = payloadMontado.orderId &&
                      payloadMontado.status === 'paid' &&
