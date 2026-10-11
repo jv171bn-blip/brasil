@@ -32,12 +32,22 @@
     'utm_id',
     'fbclid',
     'gclid',
+    'xcod',
     'gbraid',
     'wbraid',
     'ttclid',
     'src',
     'sck'
   ];
+
+  // Variáveis globais imediatas de compatibilidade exigidas pelo playbook e pelo latest.js da UTMify
+  if (typeof window !== 'undefined') {
+    window.itemExpInDays = 30;
+    window.paramsList = [
+      'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+      'utm_id', 'src', 'sck', 'fbclid', 'gclid', 'xcod', 'gbraid', 'wbraid', 'ttclid'
+    ];
+  }
 
   // Identificação do Pixel UTMify padrão do projeto
   const DEFAULT_PIXEL_ID = '6ac7eca5cc69c2e09166ca1c';
@@ -311,16 +321,31 @@
     // Sincroniza chaves individuais para máxima compatibilidade com `latest.js` e outros scripts de afiliados
     const effectiveParams = Object.assign({}, stored.lastTouch || {}, stored.firstTouch || {});
     const expIso = new Date(Date.now() + ATTRIBUTION_TTL_MS).toISOString();
+
+    // Grava as UTMs ativas e seus respectivos TTLs de expiração exigidos pelo latest.js
     Object.keys(effectiveParams).forEach(function(k) {
-      SafeStorage.setItem(k, effectiveParams[k]);
-      // CRÍTICO: o script latest.js da UTMify exige `${key}_exp` para não expirar ou deletar as UTMs
-      SafeStorage.setItem(k + '_exp', expIso);
+      if (effectiveParams[k] !== undefined && effectiveParams[k] !== null && String(effectiveParams[k]).trim().length > 0) {
+        SafeStorage.setItem(k, effectiveParams[k]);
+        // CRÍTICO: o script latest.js da UTMify exige `${key}_exp` para não expirar ou deletar as UTMs
+        SafeStorage.setItem(k + '_exp', expIso);
+      }
+    });
+
+    // Garante que qualquer parâmetro já existente no localStorage também receba _exp para não ser deletado pelo latest.js
+    TRACKED_PARAM_KEYS.forEach(function(k) {
+      const existingVal = SafeStorage.getItem(k);
+      if (existingVal && !SafeStorage.getItem(k + '_exp')) {
+        SafeStorage.setItem(k + '_exp', expIso);
+      }
     });
 
     // Exposição em variáveis globais de compatibilidade
     if (typeof window !== 'undefined') {
       window.utmParams = Object.assign({}, effectiveParams);
-      window.paramsList = Object.keys(effectiveParams);
+      window.paramsList = [
+        'utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term',
+        'utm_id', 'src', 'sck', 'fbclid', 'gclid', 'xcod', 'gbraid', 'wbraid', 'ttclid'
+      ];
       window.itemExpInDays = 30;
     }
 
@@ -699,8 +724,8 @@
     } catch (errGtag) {}
 
     // 4. API Oficial UTMify (/tracking/v1/events)
-    // Suporte documentado direto para PageView, ViewContent e Purchase
-    const supportedApiEvents = ['PageView', 'ViewContent', 'Purchase'];
+    // Suporte documentado direto para PageView, ViewContent, InitiateCheckout e Purchase
+    const supportedApiEvents = ['PageView', 'ViewContent', 'InitiateCheckout', 'Purchase'];
     if (supportedApiEvents.includes(eventName)) {
       try {
         ensureLeadData();
